@@ -170,9 +170,4 @@ def EW_PROMPT(prompt="enter a value: ", vtype=float):
             pass
 
 
-def CHECK_PLATFORM():
-    if platform.machine() in ['armv7l', 'x86_64']:
-        return platform.machine()
-
-
 

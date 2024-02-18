@@ -11,9 +11,7 @@ from .wcslot import wcSlot
 from .portholder import portHolder
 from .defaults import (
         DEFAULT_MIDI_LISTEN_CH, DEFAULT_MIDI_LISTEN_CH_MOD, DEFAULT_MIDI_LISTEN_CH_KIT, 
-        OK_FILE_TYPES, GET_INFILES,
-        CURSE_INIT,
-        pr_debug,
+        CURSE_INIT, pr_debug,
         )
 
 from .utils import EW_PROMPT
@@ -254,9 +252,6 @@ class slotHolder(portHolder):
         if value:
             self.selectedSlot.lock_length = value
 
-        
-
-
 
     ############################################################################
     ############################################################################
@@ -281,6 +276,7 @@ class slotHolder(portHolder):
             print("\033[33mgot ctrl-C\033[0m")
 
 
+    '''
     def Draw2(self):
         self.stdscr.addstr(0, 0, str(self))
         _yy = 1
@@ -309,7 +305,8 @@ class slotHolder(portHolder):
         self.stdscr.refresh()
         self.mainWin.refresh()
         self.logWin.refresh()
-         
+    '''
+
 
     def Draw(self):
         self.stdscr.addstr(0, 0, str(self))
@@ -322,16 +319,8 @@ class slotHolder(portHolder):
         self.logWin.refresh()
         self.infoWin.refresh()
 
+
     def DrawSlots(self, **kwa):
-        def _draw(txt, yy=0, xx=0, attr=None, divider=True):
-            self.mainWin.addstr(yy, xx, txt, attr)
-            xx += len(txt)
-            if divider:
-                self.mainWin.addstr(yy, xx, ' | ', attr)
-                xx += len(' | ')
-
-            return xx
-
         _col0 = kwa.get('col0', None) or curses.color_pair(24)      ## unselected, regular
         _col1 = kwa.get('col1', None) or curses.color_pair(51)      ## highlighted field
         _col2 = kwa.get('col2', None) or curses.color_pair(118)     ## toggled
@@ -339,9 +328,7 @@ class slotHolder(portHolder):
         _ym, _xm = self.mainWin.getmaxyx()
 
         _header = f"#### SLOTS  ######## {self.COORDS_MAIN} "
-        while len(_header) < _xm - 1:
-            _header += "#"
-
+        while len(_header) < _xm - 1:   _header += "#"
         self.mainWin.addstr(0, 0, _header, _col0)
 
         _yy = 1
@@ -352,12 +339,10 @@ class slotHolder(portHolder):
             _pos1   = f"{f.pos1:8.2f}"
             _ff     = f"{_infile:^20s}"
             _dd     = f"{f.duration:9.4f}"
-
             _bb     = f"{f.bpm:6.2f}"
             _ss     = f"{f.shift_tempo:6.2f}"
 
             _attr = _col0
-
             if ix == self.selected_ix:
                 _attr |= curses.A_REVERSE
 
@@ -387,7 +372,6 @@ class slotHolder(portHolder):
 
             self.mainWin.addstr(_yy+ix, _xx, _ll, _attr3);  _xx += len(_ll)
             self.mainWin.addstr(_yy+ix, _xx, ' | ', _attr); _xx += len(" | ")
-            
 
             for _fix, _file in enumerate([f.outfile, f.modfile]):
                 _attr2 = _attr
@@ -458,16 +442,11 @@ class slotHolder(portHolder):
                     return
 
                 for s in self.slots:
-                    if _chr in 'Ss':
-                        s.CfgSave()
-                    else:
-                        s.CfgLoad()
+                    s.CfgSave() if _chr in 'Ss' else s.CfgLoad()
 
                 self.Log("SAVED" if _chr in 'Ss' else "LOADED")
                 return True
 
-
-         
 
     ############################################################################
     ############################################################################
@@ -498,12 +477,7 @@ class slotHolder(portHolder):
                 'C' : self.CfgSaveLoad,
                 }
 
-        
-        ## had a mind to make functions in this class to fetch this
-        ## but is that not what this is
         self._keyDict.update({
-            #'z' : self.selectedSlot.get_infile_next,
-            #'x' : self.selectedSlot.get_infile_prev,
             'r' : self.selectedSlot.toggle_retrigger,
             'l' : self.selectedSlot.lock_length_toggle,
             })
@@ -518,6 +492,7 @@ class slotHolder(portHolder):
             _func()
             return True
 
+        ## doesnt work but why??
         if   ikey == curses.KEY_LEFT:   self.dec_field_ix
         elif ikey == curses.KEY_RIGHT:  self.inc_field_ix
         elif ikey == curses.KEY_UP:     self.IncCursor
@@ -530,7 +505,6 @@ class slotHolder(portHolder):
 
 
     def StopAll(self):
-        #sys.exit()
         for f in self.slots:
             f.doStop()
 
@@ -598,15 +572,4 @@ class slotHolder(portHolder):
 ############################################################################
 ############################################################################
 	
-
-def EW_PROMPT222(prompt="enter a value: ", vtype=float):
-    curses.endwin()
-    value = input(prompt)
-    if value and value != '\n':
-        try:
-            return vtype(value)
-        except ValueError:
-            pass
-
-
 

@@ -4,12 +4,11 @@ import sys
 import curses
 import platform
 
-## should go in slotholder?
+
 DEFAULT_MIDI_LISTEN_CH      = 15
 DEFAULT_MIDI_LISTEN_CH_MOD  = 14
 DEFAULT_MIDI_LISTEN_CH_KIT  = 13
 
-## common to wcslot, pitch, slotholder
 DEFAULT_WAV_IN_DIR  = '/tmp/wav_in'
 DEFAULT_WAV_OUT_DIR = '/tmp/wav_out'
 DEFAULT_SRC_OUT_DIR = '/tmp/source_out' ## fed to pitch objs
@@ -51,15 +50,6 @@ def MAKE_DEFAULT_DIRS():
             _print(cmd)
             os.system(cmd)
 
-
-def GET_INFILES(path):
-    _found = list()
-
-    for ix, ff in enumerate(os.listdir(path)):
-        if os.path.splitext(ff)[1] in OK_FILE_TYPES:
-            _found.append(os.path.join(path, ff))
-
-    return _found
 
 
 def pr_debug(txt):

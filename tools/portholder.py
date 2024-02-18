@@ -61,6 +61,7 @@ class portHolder():
 
 
 #### cant reach these like properties in the subclasses of this..
+'''
 class portHolder2222():
     def __init__(self):
         self.port_i = None
@@ -72,7 +73,7 @@ class portHolder2222():
     def set_port_c(self, hint): self.port_i = GET_PORT(hint, iotype=0)
     def set_port_o(self, hint): self.port_i = GET_PORT(hint, iotype=1)
     def set_port_f(self, hint): self.port_i = GET_PORT(hint, iotype=1)
-
+'''
 
 
 

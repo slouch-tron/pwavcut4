@@ -8,12 +8,8 @@ import pygame
 import shlex, subprocess
 import yaml
 
-from .utils import PYG_SOUND_LOAD, RUN_PROC, EXECUTE_CMD
-from .defaults import (
-        DEFAULT_WAV_IN_DIR, DEFAULT_WAV_OUT_DIR, DEFAULT_SRC_OUT_DIR, 
-        OK_FILE_TYPES, GET_INFILES,
-        pr_debug,
-        )
+from .utils import PYG_SOUND_LOAD, EXECUTE_CMD
+from .defaults import DEFAULT_WAV_IN_DIR, DEFAULT_WAV_OUT_DIR, OK_FILE_TYPES, pr_debug
 
 
 DEFAULT_POS0 = 0.0
@@ -27,7 +23,7 @@ class wcSlot():
     ID = 0
     WAV_IN_DIR  = DEFAULT_WAV_IN_DIR
     WAV_OUT_DIR = DEFAULT_WAV_OUT_DIR
-    SRC_OUT_DIR = DEFAULT_SRC_OUT_DIR
+    #SRC_OUT_DIR = DEFAULT_SRC_OUT_DIR
     OK_FILE_TYPES   = OK_FILE_TYPES
     CFG_SAVE_ATTRS  = ['pos0', 'pos1', 'bpm', 'shift_tempo', 'infile']
 
@@ -270,7 +266,6 @@ class wcSlot():
     ###################################################################
     def run_proc(self, cmd):
         return EXECUTE_CMD(cmd)
-        #return RUN_PROC(cmd)
 
     @property
     def cmd_docut_out(self):
