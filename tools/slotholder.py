@@ -365,6 +365,7 @@ class slotHolder(portHolder):
                 self.mainWin.addstr(_yy+ix, _xx, " | ", _attr); _xx += len(" | ")
 
             _attr3 = _attr
+            #_attr3 = _col2
             if f.lock_length_switch:
                 if ix == self.selected_ix:
                     _attr3 = _col1

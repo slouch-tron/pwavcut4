@@ -17,6 +17,7 @@ DEFAULT_POS1 = 8.0
 DEFAULT_BPM     = 120.0
 DEFAULT_SHIFT   = 120.0
 DEFAULT_LOCK    = 12.0
+DEFAULT_RETRIG  = True
 
 
 class wcSlot():
@@ -381,6 +382,7 @@ class wcSlot():
         self.infile and _dict.update(dict(infile=self.infile))
         (self.lock_length != DEFAULT_LOCK) and _dict.update(dict(lock_length=self.lock_length))
         self.lock_length_switch and _dict.update(dict(lock=self.lock_length_switch))
+        (self.retrigger != DEFAULT_RETRIG) and _dict.update(dict(retrigger=self.retrigger))
         
         if _dict:   ## is there non-default data to save?
             if os.path.isfile(self.cfg_filename):
@@ -416,11 +418,14 @@ class wcSlot():
                 _val = _data.get('infile', None)
                 if _val:    self.infile = _val
 
+                _val = _data.get('lock', None)
+                if _val != None:    self.lock_length_switch = _val
+
                 _val = _data.get('lock_length', None)
                 if _val:    self.lock_length = _val
 
-                _val = _data.get('lock', None)
-                if _val != None:    self.lock_length_switch = _val
+                _val = _data.get('retrigger', None)
+                if _val != None:    self.retrigger = _val
 
                 #self.Log(f"{self.slotname}.CFGLOAD")
    
