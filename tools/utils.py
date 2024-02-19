@@ -4,10 +4,12 @@ import time
 import shlex, subprocess
 import curses
 import pygame
+from pygame.midi import midi_to_ansi_note
+from pygame.midi import midi_to_frequency
 
 from pydub import AudioSegment
 
-from .defaults import DEFAULT_WAV_IN_DIR
+from .defaults import DEFAULT_WAV_IN_DIR, DEFAULT_SRC_OUT_DIR
 
 
 
@@ -26,19 +28,13 @@ def PYG_SOUND_LOAD(filename):
         return _sound
 
 
-def RUN_PROC(cmd, debug=1):
+def RUN_PROC(cmd, debug=1):     ## less used now
 
     if debug:
         curses.endwin()
         print(f"\033[33mRUN_PROC: {cmd}\033[0m", file=sys.stderr)
 
-    p = subprocess.Popen(
-        shlex.split(cmd), 
-        stdout=subprocess.PIPE, 
-        stderr=subprocess.PIPE
-        )
-
-    ## might want to, end curses screen, poll and print update until done here
+    p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     o, e = p.communicate()
 
     if debug:
@@ -55,12 +51,6 @@ def RUN_PROC(cmd, debug=1):
 ##	so now: channel split by pydub to temp file, ffmpeg processes to 'standard' file.
 ##	pydub probably does this too but some places we are not in a Class
 def DO_STEREO(source='/tmp/wav_in/file1.wav', keep_pan=True, debug=0):
-    try:
-        curses.endwin()
-    except Exception as ee:
-        print("\033[31m something went wrong with this check! \033[0m")
-        input()
-
     def _print(txt):
         print(f"dostereo: {txt}")
 
@@ -170,4 +160,71 @@ def EW_PROMPT(prompt="enter a value: ", vtype=float):
             pass
 
 
+
+## Used by pitch slicer class
+def DOFFMPEG(
+    pitch_ix, source, 
+    ## might want to make some of the kwa into args but for now, testing
+    basenote_ix=69, ## midi note 'A4', pitch 440hz
+    notempo=False,
+    shift_tempo=1.0,
+    outfile=None,   ## overrides dest_dir and label
+    debug=0,
+    ):
+
+    nkey = midi_to_ansi_note(pitch_ix)
+    if not outfile:
+        outfile = os.path.join(DEFAULT_SRC_OUT_DIR, f"TEST-file_{pitch_ix:03d}_{nkey}.wav")
+
+    hifi = True     ## platform check here?
+    rate = 44100 if hifi else 22050
+    
+    cmd_head = f"ffmpeg -y -i {source}"
+
+    if notempo:
+        cmd = cmd_head 
+        #cmd += " -af asetrate={}*{}/{} ".format(rate, int(nval*100)
+        #cmd += outfile
+    else:
+        tempo_factor    = midi_to_frequency(basenote_ix) / midi_to_frequency(pitch_ix)
+
+        if tempo_factor < 0.5:
+            _ccc = 0
+            while tempo_factor < (1 / (2**_ccc)):
+                _ccc += 1
+            tempo_str = "atempo={:.8f},".format(tempo_factor*(2**(_ccc-1)))
+            tempo_str += "atempo=1/2"*(_ccc-1)
+        elif tempo_factor > 2:
+            tempo_str = "atempo={:.4f}".format(tempo_factor)
+        else:
+            tempo_str = "atempo={:.4f}".format(tempo_factor)
+
+        if shift_tempo < tempo_factor:  ## does this overwrite the 0.5 case?
+            tempo_str += ",atempo={:.4f}".format(shift_tempo)
+        else:
+            tempo_str = "atempo={:.4f},".format(shift_tempo) + tempo_str
+
+
+        if tempo_factor < 1:
+            cmd = cmd_head + " -af asetrate={}*{}/{},{} {}".format(
+                    rate, 
+                    int(midi_to_frequency(pitch_ix)) * 100,
+                    int(midi_to_frequency(basenote_ix)) * 100,
+                    tempo_str,
+                    outfile,
+                    )
+        else:
+            cmd = cmd_head + " -af {},asetrate={}*{}/{} {}".format(
+                    tempo_str,
+                    rate,
+                    int(midi_to_frequency(pitch_ix)) * 100,
+                    int(midi_to_frequency(basenote_ix)) * 100,
+                    outfile,
+                    )
+
+        debug and print(f"\033[33m{cmd}\033[0m", file=sys.stderr)
+
+        return cmd
+
+    
 

@@ -11,7 +11,7 @@ from .wcslot import wcSlot
 from .portholder import portHolder
 from .defaults import (
         DEFAULT_MIDI_LISTEN_CH, DEFAULT_MIDI_LISTEN_CH_MOD, DEFAULT_MIDI_LISTEN_CH_KIT, 
-        CURSE_INIT, pr_debug,
+        CURSE_INIT, 
         )
 
 from .utils import EW_PROMPT
@@ -50,14 +50,9 @@ class slotHolder(portHolder):
             yy, xx = self.mainWin.getmaxyx()
 
         return " | ".join([
-            #self.__class__.__name__,
             f"SLOT {self.selected_ix:>2d}/{self.slot_count:02d}",
             f"FIELD {self.field:6}",
             f"RES {self.resolution:4.2f}",
-            #f"{self.port_i}",
-            #f"{self.port_o}",
-            #f"{self.port_c}",
-            #f"{self.port_f}",
             f"{self.last_func:^20s}",
             f"cyc={self.cyc_ct:>9d}",
             f"mwcoord=({y0},{x0},{yy},{xx})",
@@ -252,7 +247,6 @@ class slotHolder(portHolder):
         if value:
             self.selectedSlot.lock_length = value
 
-
     ############################################################################
     ############################################################################
 
@@ -274,38 +268,6 @@ class slotHolder(portHolder):
         except KeyboardInterrupt:
             curses.endwin()
             print("\033[33mgot ctrl-C\033[0m")
-
-
-    '''
-    def Draw2(self):
-        self.stdscr.addstr(0, 0, str(self))
-        _yy = 1
-        for ix, f in enumerate(self.slots):
-            _attr = curses.color_pair(24)
-            if ix == self.selected_ix:
-                _attr |= curses.A_REVERSE
-
-            _xx = 0
-            _ostr = f"{ix:02d}"
-            _ostr += " | "
-            _xx = len(_ostr)
-            self.mainWin.addstr(_yy+ix, 0, _ostr, _attr)
-            self.mainWin.addstr(_yy+ix, _xx, str(f), _attr)
-
-        #y0, x0 = self.mainWin.getbegyx()
-        #yy, xx = self.mainWin.getmaxyx()
-        _ymax, _ = self.logWin.getmaxyx() 
-        _ymax -= 2
-
-        self.logWin.addstr(0, 0, "LOG!")
-        for ix, f in enumerate(self.log_lines[-_ymax:]):
-            self.logWin.addstr(ix+1, 0, f)
-
-
-        self.stdscr.refresh()
-        self.mainWin.refresh()
-        self.logWin.refresh()
-    '''
 
 
     def Draw(self):
@@ -494,6 +456,7 @@ class slotHolder(portHolder):
             return True
 
         ## doesnt work but why??
+        ## maybe- need to pass in same 'stdscr' to anything with windowing?
         if   ikey == curses.KEY_LEFT:   self.dec_field_ix
         elif ikey == curses.KEY_RIGHT:  self.inc_field_ix
         elif ikey == curses.KEY_UP:     self.IncCursor
@@ -501,11 +464,11 @@ class slotHolder(portHolder):
         else:
             return
 
-        print("YES")
         return True
 
 
     def StopAll(self):
+        #[f.doStop() for f in self.slots]
         for f in self.slots:
             f.doStop()
 
@@ -548,26 +511,6 @@ class slotHolder(portHolder):
                     self.last_msg_c = msg
                     _func()
                     return True
-
-
-    ############################################################################
-    ############################################################################
-    ## call from main/run function
-    def parse_argv(self, argv):
-        print(f"parse_argv: START from {argv[0]}")
-        parser = argparse.ArgumentParser(description="cmd line options for p_wavcut")
-        parser.add_argument('-i', '--port_i', dest='port_i', type=str, help='midi port in')
-        parser.add_argument('-c', '--port_c', dest='port_c', type=str, help='midi port ctrl')
-        parser.add_argument('-o', '--port_o', dest='port_o', type=str, help='midi port out')
-        parser.add_argument('-f', '--port_f', dest='port_f', type=str, help='midi port fwd/thru')
-        args = parser.parse_args(argv[1:])
-
-        self.port_i = args.port_i
-        self.port_o = args.port_o
-        self.port_c = args.port_c
-        self.port_f = args.port_f
-
-        return args
 
 
 ############################################################################

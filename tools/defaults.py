@@ -25,6 +25,7 @@ def CURSE_INIT(stdscr):
     curses.start_color()
     curses.init_color(0,0,0,0)
     curses.curs_set(0)
+    curses.noecho()
 
     TRANSPARENT and curses.use_default_colors()
 

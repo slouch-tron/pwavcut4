@@ -12,6 +12,7 @@ from .utils import PYG_SOUND_LOAD, EXECUTE_CMD
 from .defaults import DEFAULT_WAV_IN_DIR, DEFAULT_WAV_OUT_DIR, OK_FILE_TYPES, pr_debug
 
 
+## to compare when saving cfg, dont save defaults
 DEFAULT_POS0 = 0.0
 DEFAULT_POS1 = 8.0
 DEFAULT_BPM     = 120.0
@@ -24,7 +25,7 @@ class wcSlot():
     ID = 0
     WAV_IN_DIR  = DEFAULT_WAV_IN_DIR
     WAV_OUT_DIR = DEFAULT_WAV_OUT_DIR
-    #SRC_OUT_DIR = DEFAULT_SRC_OUT_DIR
+    #SRC_OUT_DIR = DEFAULT_SRC_OUT_DIR  ## 'need to know' basis?
     OK_FILE_TYPES   = OK_FILE_TYPES
     CFG_SAVE_ATTRS  = ['pos0', 'pos1', 'bpm', 'shift_tempo', 'infile']
 
@@ -57,6 +58,7 @@ class wcSlot():
         self.pitchObj = None
 
         self.Log(f"{self.slotname} initialized!")
+
 
     def __str__(self):
         _files = [self.outfile, self.modfile, self.recfile, self.monfile]
@@ -194,6 +196,10 @@ class wcSlot():
         self.lock_length_switch = not self.lock_length_switch
 
 
+    def toggle_retrigger(self):
+        self.retrigger = not self.retrigger
+
+
     ##  things that get passed to ffmpeg functions
     ###################################################################
     ###################################################################
@@ -208,7 +214,6 @@ class wcSlot():
         self._bpm = max(bpm, 0)
         self.shift_tempo = bpm	## experiment
 
-    ## does this need a property?  is it good just for consistency with bpm?
     @property
     def shift_tempo(self):
         if not hasattr(self, '_shift_tempo'):
@@ -299,10 +304,6 @@ class wcSlot():
 
 
     def doCut3_out(self, mod=False):
-        ## checks done in the setters
-        #if not self.infile:
-        #    return
-
         cmd = self.cmd_docut_mod if mod else self.cmd_docut_out
         if cmd:
             _result = self.run_proc(cmd)
@@ -355,12 +356,8 @@ class wcSlot():
         self.outsound and self.outsound.stop()
         self.modsound and self.modsound.stop()
 
-
-    def toggle_retrigger(self):
-        self.retrigger = not self.retrigger
-
-############################################################################
-############################################################################
+    ############################################################################
+    ############################################################################
 
     @property
     def cfg_filename(self):
@@ -393,41 +390,30 @@ class wcSlot():
             with open(self.cfg_filename, 'w') as cfgf:
                 yaml.dump(DATA, cfgf)
 
-        #self.Log(f"{self.slotname}.CFGSAVE")
-
 
     def CfgLoad(self):
         if os.path.isfile(self.cfg_filename):
             with open(self.cfg_filename, 'r') as cfgf:
                 DATA = yaml.full_load(cfgf)
-
             _data = DATA.get(self.slotname, None)
             if _data:
                 _val = _data.get('pos0', None)
                 if _val:    self.pos0 = _val
-
                 _val = _data.get('pos1', None)
                 if _val:    self.pos1 = _val
-
                 _val = _data.get('bpm', None)
                 if _val:    self.bpm = _val
-
                 _val = _data.get('shift_tempo', None)
                 if _val:    self.shift_tempo = _val
-
                 _val = _data.get('infile', None)
                 if _val:    self.infile = _val
-
                 _val = _data.get('lock', None)
                 if _val != None:    self.lock_length_switch = _val
-
                 _val = _data.get('lock_length', None)
                 if _val:    self.lock_length = _val
-
                 _val = _data.get('retrigger', None)
                 if _val != None:    self.retrigger = _val
-
-                #self.Log(f"{self.slotname}.CFGLOAD")
+                #self.Log(f"{self.slotname}.CFGLOAD")   ## print once in the caller 'slots loaded'
    
 
 

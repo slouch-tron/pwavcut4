@@ -4,6 +4,7 @@ import os
 import sys
 import re
 import mido
+import argparse
 
 DEBUG = int(os.environ.get('DEBUG', 0))
 
@@ -58,6 +59,46 @@ class portHolder():
     @staticmethod
     def GETPORT(*arg, **kwa):
         return GET_PORT(*arg, *kwa)
+
+    @property
+    def ctrl_ch(self):
+        if not hasattr(self, '_ctrl_ch'):
+            self._ctrl_ch = 1
+
+        return self._ctrl_ch
+
+    @ctrl_ch.setter
+    def ctrl_ch(self, val):
+        self._ctrl_ch = val % 16
+
+    def inc_ctrl_ch(self):          self.ctrl_ch += 1
+    def dec_ctrl_ch(self):          self.ctrl_ch -= 1
+
+
+    ############################################################################
+    ############################################################################
+    ## call from main/run function
+    def parse_argv(self, argv):
+        print(f"parse_argv: START from {argv[0]}")
+        parser = argparse.ArgumentParser(description="cmd line options for p_wavcut")
+        parser.add_argument('-i', '--port_i', dest='port_i', type=str, help='midi port in')
+        parser.add_argument('-c', '--port_c', dest='port_c', type=str, help='midi port ctrl')
+        parser.add_argument('-o', '--port_o', dest='port_o', type=str, help='midi port out')
+        parser.add_argument('-f', '--port_f', dest='port_f', type=str, help='midi port fwd/thru')
+        parser.add_argument('-C', '--channel', dest='channel', 
+                type=int, help='midi ch for control')
+
+        args = parser.parse_args(argv[1:])
+
+        self.port_i = args.port_i
+        self.port_o = args.port_o
+        self.port_c = args.port_c
+        self.port_f = args.port_f
+        if args.channel:
+            self.ctrl_ch = args.channel
+
+        return args
+
 
 
 #### cant reach these like properties in the subclasses of this..

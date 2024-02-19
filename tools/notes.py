@@ -1,5 +1,13 @@
 ## table of note pitches
 ##  for ffmpeg settings when pitch shifting
+## would this be better as a YAML or JSON?  no different i guess.
+
+import json
+#import yaml
+
+from pygame.midi import midi_to_ansi_note
+from pygame.midi import midi_to_frequency
+
 NOTE_DICT = {       
     "C0"    : 16.35, 
     "C#0"   : 17.32, 
@@ -112,9 +120,33 @@ NOTE_DICT = {
     }
 
 
-def getKeyIx(key):
-	return list(notes).index(key) 
+NOTE_LIST = [ [note, NOTE_DICT[note]] for ix, note in enumerate(NOTE_DICT.keys()) ]
+
+
+def GET_KEY_IX(key):
+    return list(NOTE_DICT).index(key) 
 
 
 
+def _compare_test():    ## compares whats in pygame to our notes dict.  pretty much same?
+    for ff in range(0, 128):
+        ix = ff - 12
+        if ix > 0 and ix < len(NOTE_LIST):
+            _nstr = f"{str(NOTE_LIST[ix]):20}"
+        else:
+            _nstr = f"{str(None):20}"
 
+        print(" | ".join([
+            f"{ff:03d}",
+            f"{midi_to_ansi_note(ff):6}",
+            f"{midi_to_frequency(ff):8}",
+            _nstr,
+            
+            ]))
+
+
+if __name__ == '__main__':
+    #[print(f"{i:02} : {f}") for i, f in enumerate(list(NOTE_DICT))]
+    #print(str([x for x in NOTE_LIST]).replace(' ', '').replace("'", '"'))
+    #print(json.dumps(NOTE_DICT, indent=2))
+    _compare_test()
