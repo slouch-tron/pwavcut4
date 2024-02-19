@@ -27,6 +27,12 @@ def PYG_SOUND_LOAD(filename):
 
         return _sound
 
+def NORMALIZE(filename, outfile="/tmp/norm1.wav"):
+    if filename and os.path.isfile(filename):
+        seg = AudioSegment.from_wav(filename)
+        norm = seg.normalize()
+        norm.export(outfile)
+
 
 def RUN_PROC(cmd, debug=1):     ## less used now
 
