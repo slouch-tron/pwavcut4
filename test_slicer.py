@@ -10,7 +10,7 @@ from tools import slotHolder
 from tools import Slicer, PitchesSlicer
 from tools import CURSE_INIT
 
-fff = "/tmp/wav_out/slot00/OUT.wav"
+fff = os.environ.get('INFILE', "/tmp/wav_out/slot00/OUT.wav")
 
 CURSE = int(os.environ.get('CURSE', 0))
 
