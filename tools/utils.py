@@ -150,7 +150,7 @@ def INFILE_CONVERT(infile, outfile_fullpath, debug=1):
     _cmd = f"ffmpeg -y -i \"{infile}\" -ar 44100 -map_metadata -1 \"{outfile_fullpath}\""
 
     if debug:
-        curses.endwin()
+        #curses.endwin()
         print(f"INFILE_CONVERT: cmd={_cmd}")
 
     return EXECUTE_CMD(_cmd)
