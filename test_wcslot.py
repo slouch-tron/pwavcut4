@@ -9,7 +9,7 @@ from tools import slotHolder
 
 
 def main_test():
-    hhh = slotHolder(slot_count=16)
+    hhh = slotHolder(slot_count=12)
     hhh.port_i = "Arturia"
 
     aaa = hhh.parse_argv(sys.argv)
@@ -23,4 +23,5 @@ def main_test():
 if __name__ == '__main__':
     pygame.mixer.init()
     main_test()
+    curses.endwin()
 

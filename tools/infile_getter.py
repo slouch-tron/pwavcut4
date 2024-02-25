@@ -5,12 +5,13 @@ import argparse
 import shlex, subprocess
 import hashlib      ## non colliding filenames
 import time
+import curses
 
 from enum import Enum, auto
 from .utils import INFILE_CONVERT_CMD_FMT   
 from .defaults import DEFAULT_WAV_IN_DIR
 
-DEBUG       = int(os.environ.get('DEBUG', 1))
+DEBUG       = int(os.environ.get('DEBUG', 0))
 RECOPY      = int(os.environ.get('RECOPY', 1))
 RECONVERT   = int(os.environ.get('RECONVERT', 1))
 
@@ -24,6 +25,7 @@ class States(Enum):
     CONVERT     = auto()
     READY       = auto()
     ERROR       = auto()
+    CANCEL      = auto()
 
 class CopyModes(Enum):
     YTDL    = auto()
@@ -40,6 +42,7 @@ class InfileGetter():
     MODES       = CopyModes
     DEST_DIR    = DEFAULT_WAV_IN_DIR
     CONVERT_DIR = DEFAULT_CONVERT_DIR
+    COORDS_INFO = (20, 48, 22, 61)
 
     not os.path.isdir(CONVERT_DIR) and os.mkdir(CONVERT_DIR)
 
@@ -47,6 +50,8 @@ class InfileGetter():
         self.convert_target = kwa.get('convert_target', None)
         self.copy_target    = kwa.get('copy_target', None)
         self.uri            = kwa.get('uri', None)
+        #self.stdscr         = kwa.get('stdscr', None)
+        self.Log            = kwa.get('Log', print)
         self.errors         = []
         self.proc_start     = None
         self.last_cmd       = None
@@ -62,13 +67,17 @@ class InfileGetter():
             "{:6.2f} sec".format(time.time() - self.proc_start) if self.proc_start else '-',
             ])
 
+    def __del__(self):
+        self.proc = False
+
 
     @property
     def state(self):
         if not hasattr(self, '_state'):
             self._state = self.STATES.INIT
 
-        if self._state == self.STATES.ERROR:
+        if self._state in [self.STATES.ERROR, self.STATES.CANCEL]:
+            self.proc = False
             return self._state
 
         if self._state == self.STATES.COPY:
@@ -102,6 +111,7 @@ class InfileGetter():
 
         return self._state
 
+    #######################################################################
 
     @property
     def proc(self):
@@ -115,15 +125,16 @@ class InfileGetter():
 
         self.proc
 
+        if self._proc:   
+            self._proc.terminate()
+            self._proc = None
+            #print("terminated previous proc")
+
         if not cmd:
             self._proc = False
             #self.last_cmd = None
 
         else:
-            if self._proc:
-                self._proc.terminate()
-                self._proc = None
-                #print("terminated previous proc")
 
             self.last_cmd = cmd
             self._proc = subprocess.Popen(
@@ -135,9 +146,11 @@ class InfileGetter():
             self.proc_start = time.time()
             DEBUG and print(f"\033[33m## {cmd}\033[0m", file=sys.stderr)
 
+    #######################################################################
 
     def Convert(self, reconvert=False):
         def _print(txt, err=0):
+            self.Log(f"Convert | {txt}")
             DEBUG and print(f"\033[33mConvert | {txt}\033[0m", file=sys.stderr)
             err and self.errors.append(err)
 
@@ -158,8 +171,9 @@ class InfileGetter():
 
     def _WebCopy(self, mode=CopyModes.SCP, recopy=False):
         def _print(txt, err=0):
+            self.Log(f"Copy | {txt}")
             DEBUG and print(f"\033[33mCopy | {txt}\033[0m", file=sys.stderr)
-            err and self.errors.append(err)
+            err and self.errors.append(txt)
 
         _recopy = recopy or RECOPY
         _print(f"mode={str(mode)}, recopy={_recopy}")
@@ -201,7 +215,71 @@ class InfileGetter():
     def Copy_FILE(self):       return self._WebCopy(self.MODES.FILE)
     def Copy_HTTP(self):       return self._WebCopy(self.MODES.HTTP)
 
+    def Cancel(self):
+        self.Log(f"cancel running {self.__class__.__name__}")
+        self.proc = False
+        self.proc_start = None
+        self._state = self.STATES.CANCEL
 
+    #######################################################################
+
+    @property
+    def InfoWin(self):
+        if not hasattr(self, '_InfoWin'):
+            self._InfoWin = None
+            self.InfoWin = None
+
+        return self._InfoWin
+
+    @InfoWin.setter
+    def InfoWin(self, coords):
+        _coords = coords if coords != None else self.COORDS_INFO
+        self._InfoWin = curses.newwin(*_coords)
+        #self._InfoWin.keypad(1)
+            
+
+    def Draw(self, **kwa):
+        col0 = kwa.get('col0', curses.color_pair(56))
+        col1 = kwa.get('col1', curses.color_pair(66))
+        col2 = kwa.get('col1', curses.color_pair(76))
+        col3 = kwa.get('col1', curses.color_pair(86))
+        blink = kwa.get('blink', [56, 66, 76, 86])
+
+        _time = time.time()
+        _bix  = int(_time * 100) % len(blink)
+        _bcol = curses.color_pair(_bix)
+        _attr = curses.color_pair(blink[0])
+
+        _ee = "elapsed:    "
+        _ee += "{:6.2f} sec".format(_time - self.proc_start) if self.proc_start else ""
+
+        _cc = 'None'
+        _cv = 'None'
+        if self.copy_target:    _cc = os.path.splitext(os.path.split(self.copy_target)[-1])[0]
+        if self.convert_target: _cv = os.path.splitext(os.path.split(self.convert_target)[-1])[0]
+
+        self.InfoWin.addstr(0, 0, self.__class__.__name__, _attr)
+        self.InfoWin.addstr(1, 0, "state:    ", _attr)
+        self.InfoWin.addstr(1, 10, self.state.name, _bcol if self.proc else _attr)
+        _yy = 2
+
+        _lines = [
+            f"uri:      {str(self.uri)}",
+            #f"copy:     {_cc}",
+            f"convert:  {_cv}",
+            f"dest_dir: {self.DEST_DIR}",
+            _ee,
+            f"errors:   {len(self.errors)}",
+            ]
+
+        len(self.errors) > 0 and [_lines.append(x) for x in self.errors]
+
+        for ix, line in enumerate(_lines):
+            self.InfoWin.addstr(ix+_yy, 0, str(line), _attr)
+
+
+
+    #######################################################################
     def parse_argv(self, argv):
         parser = argparse.ArgumentParser(
             description=f"cmd line options for {self.__class__.__name__} demo")
@@ -227,5 +305,45 @@ class InfileGetter():
             return
 
         return True
+
+
+    def prompt_for_filename(self):
+        def _print(txt):
+            self.Log(f"prompt_for_filename: {txt}")
+
+        if 'curses' in globals():
+            curses.endwin()
+
+        if self.proc:
+            _print("terminate proc if running")
+            self.Cancel()
+            return
+
+        _prompt = "enter FILENAME on this filesystem to import: "
+        _prompt += f"(prev '{self.uri}')" if self.uri else ""
+
+        try:
+            _print(_prompt)
+            value = input(_prompt)
+            if value in ['\n', '']:
+                if self.uri:    ## previously used or unset?
+                    print()
+                    _val = input(f"use prev '{self.uri}'?")
+                    if _val not in ['\n', '']:
+                        raise KeyboardInterrupt
+            else:
+                if not value:
+                    return
+                self.uri = str(value)
+
+            self.Copy_FILE()
+
+        except KeyboardInterrupt:
+            self._state = self.STATES.INIT
+            _print("cancelled file prompt")
+        except TypeError:
+            _print(f"value must be string: '{value}'")
+            
+
 
 

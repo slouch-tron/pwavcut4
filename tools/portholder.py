@@ -60,6 +60,8 @@ class portHolder():
     def GETPORT(*arg, **kwa):
         return GET_PORT(*arg, *kwa)
 
+    ## not needed here, the slots may want to change channel though
+    '''
     @property
     def ctrl_ch(self):
         if not hasattr(self, '_ctrl_ch'):
@@ -73,7 +75,7 @@ class portHolder():
 
     def inc_ctrl_ch(self):          self.ctrl_ch += 1
     def dec_ctrl_ch(self):          self.ctrl_ch -= 1
-
+    '''
 
     ############################################################################
     ############################################################################

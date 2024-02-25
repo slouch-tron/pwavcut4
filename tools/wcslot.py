@@ -10,20 +10,26 @@ import yaml
 
 ## ought to just have our own EXECUTE_CMD maybe?  phase the 'utils' file out?
 from .utils import PYG_SOUND_LOAD, EXECUTE_CMD
-from .defaults import DEFAULT_WAV_IN_DIR, DEFAULT_WAV_OUT_DIR, OK_FILE_TYPES, pr_debug
+from .defaults import (
+        DEFAULT_WAV_IN_DIR, DEFAULT_WAV_OUT_DIR, 
+        OK_FILE_TYPES, pr_debug,
+        CFG_PATH,
+        )
 
 
 ## to compare when saving cfg, dont save defaults
-DEFAULT_POS0 = 0.0
-DEFAULT_POS1 = 8.0
+DEFAULT_POS0    = 0.0
+DEFAULT_POS1    = 8.0
 DEFAULT_BPM     = 120.0
 DEFAULT_SHIFT   = 120.0
 DEFAULT_LOCK    = 12.0
 DEFAULT_RETRIG  = True
+DEFAULT_CTRL_CH = 1
 
 
 class wcSlot():
     ID = 0
+    CH_MAX = 12     ## reserve some
     WAV_IN_DIR  = DEFAULT_WAV_IN_DIR
     WAV_OUT_DIR = DEFAULT_WAV_OUT_DIR
     #SRC_OUT_DIR = DEFAULT_SRC_OUT_DIR  ## 'need to know' basis?
@@ -38,11 +44,13 @@ class wcSlot():
         self.stdscr     = kwa.get('stdscr', None)
         self.Log        = kwa.get('Log', pr_debug)
         self.debug      = kwa.get('debug', 0)
+        self.ctrl_ch    = kwa.get('ctrl_ch', self.ctrl_ch)
 
         self.selected   = False
         self.retrigger  = True
         self.lastproc   = None
         self.procs      = list()
+
 
         ## would we want 'get next filename' for Recording for example?
         self.slotname   = f"slot{self.slotnum:02d}"
@@ -225,6 +233,19 @@ class wcSlot():
     def shift_tempo(self, val):
         self._shift_tempo = max(val, 0)
 
+    @property
+    def ctrl_ch(self):
+        if not hasattr(self, '_ctrl_ch'):
+            self._ctrl_ch = DEFAULT_CTRL_CH
+
+        return self._ctrl_ch
+
+    @ctrl_ch.setter
+    def ctrl_ch(self, val):
+        self._ctrl_ch = val % self.CH_MAX
+
+    def inc_ctrl_ch(self):          self.ctrl_ch += 1
+    def dec_ctrl_ch(self):          self.ctrl_ch -= 1
 
     ## IN/OUT/MOD SOUND do we even need 'setters'?  just set _sound to None right?
     ###################################################################
@@ -364,7 +385,8 @@ class wcSlot():
     def cfg_filename(self):
         if not hasattr(self, '_cfg_filename'):
             _file = os.path.splitext(os.path.split(sys.argv[0])[1])[0] + ".yml"
-            self._cfg_filename = _file
+            #self._cfg_filename = _file
+            self._cfg_filename = os.path.join(CFG_PATH, _file)
 
         return self._cfg_filename
 
@@ -377,6 +399,7 @@ class wcSlot():
         (self.pos1 != DEFAULT_POS1) and _dict.update(dict(pos1=self.pos1))
         (self.bpm != DEFAULT_BPM) and _dict.update(dict(bpm=self.bpm))
         (self.shift_tempo != DEFAULT_SHIFT) and _dict.update(dict(shift_tempo=self.shift_tempo))
+        (self.ctrl_ch != DEFAULT_CTRL_CH) and _dict.update(dict(ctrl_ch=self.ctrl_ch))
         self.infile and _dict.update(dict(infile=self.infile))
         (self.lock_length != DEFAULT_LOCK) and _dict.update(dict(lock_length=self.lock_length))
         self.lock_length_switch and _dict.update(dict(lock=self.lock_length_switch))
@@ -408,13 +431,15 @@ class wcSlot():
                 if _val:    self.shift_tempo = _val
                 _val = _data.get('infile', None)
                 if _val:    self.infile = _val
+                _val = _data.get('ctrl_ch', None)
+                if _val:    self.ctrl_ch = _val
                 _val = _data.get('lock', None)
                 if _val != None:    self.lock_length_switch = _val
                 _val = _data.get('lock_length', None)
                 if _val:    self.lock_length = _val
                 _val = _data.get('retrigger', None)
                 if _val != None:    self.retrigger = _val
-                #self.Log(f"{self.slotname}.CFGLOAD")   ## print once in the caller 'slots loaded'
+                #self.Log(f"{self.slotname}.CFGLOAD") ## print once in the caller 'slots loaded'
    
 
 

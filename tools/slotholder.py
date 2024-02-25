@@ -9,6 +9,7 @@ import pygame
 
 from .wcslot import wcSlot
 from .portholder import portHolder
+from .infile_getter import InfileGetter
 from .defaults import (
         DEFAULT_MIDI_LISTEN_CH, DEFAULT_MIDI_LISTEN_CH_MOD, DEFAULT_MIDI_LISTEN_CH_KIT, 
         CURSE_INIT, 
@@ -22,7 +23,7 @@ class slotHolder(portHolder):
     RESOLUTIONS = [1.0, 0.1, 0.01]
     COORDS_MAIN = (20, 100, 2, 1)
     COORDS_INFO = (20, 48, 22, 1)
-    COORDS_LOG  = (20, 100, 40, 1)
+    COORDS_LOG  = (19, 100, 40, 1)
 
     MIDI_CH_CTL = DEFAULT_MIDI_LISTEN_CH
     MIDI_CH_MOD = DEFAULT_MIDI_LISTEN_CH_MOD
@@ -33,7 +34,7 @@ class slotHolder(portHolder):
 
         self.slots = []
         for s in range(self.slot_count):
-            self.slots.append(wcSlot(slotnum=s, Log=self.Log))
+            self.slots.append(wcSlot(slotnum=s, ctrl_ch=s, Log=self.Log))
 
         self.stdscr     = curses.wrapper(CURSE_INIT)
         self.last_func  = 'None'
@@ -79,6 +80,11 @@ class slotHolder(portHolder):
         self.log_lines.append(txt)
         #while len(self.log_lines) > 16:
         #    self.log_lines.pop(0)
+
+
+    def Quit(self):
+        self.TermPrint()
+        sys.exit()
 
 
     ## changeable with input like keys or midi messages
@@ -129,6 +135,9 @@ class slotHolder(portHolder):
     def field_ix(self, val):
         self._field_ix = val % len(self.EDITFIELDS)
 
+    ## windows
+    #############################################################
+    #############################################################
     @property
     def mainWin(self):
         if not hasattr(self, '_mainWin'):
@@ -178,7 +187,7 @@ class slotHolder(portHolder):
     def dec_field_ix(self):         self.field_ix -= 1
 
 
-    ## other functions activated by keys/msgs
+    ## Slot functions
     ############################################################################
     def DoCutOut(self, mod=False):
         _slot = self.selectedSlot
@@ -204,9 +213,10 @@ class slotHolder(portHolder):
         self.selectedSlot.doPlay_orig()
 
 
-    def Quit(self):
-        self.TermPrint()
-        sys.exit()
+    def StopAll(self):
+        #[f.doStop() for f in self.slots]
+        for f in self.slots:
+            f.doStop()
 
 
     def IncCursor(self, dec=False):
@@ -220,6 +230,10 @@ class slotHolder(portHolder):
 
     def DecCursor(self):
         self.IncCursor(dec=True)
+
+
+    def IncSlotCtrlCh(self):    self.selectedSlot.inc_ctrl_ch()
+    def DecSlotCtrlCh(self):    self.selectedSlot.dec_ctrl_ch()
 
 
     def SetSlotBpm(self):
@@ -247,6 +261,28 @@ class slotHolder(portHolder):
         if value:
             self.selectedSlot.lock_length = value
 
+    ## Importer
+    ############################################################################
+    ############################################################################
+    @property
+    def Importer(self):
+        if not hasattr(self, '_Importer'):
+            self._Importer = None
+
+        if not self._Importer:
+            self.Importer = InfileGetter(Log=self.Log)
+
+        return self._Importer
+
+    @Importer.setter
+    def Importer(self, val):
+        self._Importer = val
+
+    def ImportFile(self):
+        if self.Importer:
+            self.Importer.prompt_for_filename()
+
+
     ############################################################################
     ############################################################################
 
@@ -272,9 +308,16 @@ class slotHolder(portHolder):
 
     def Draw(self):
         self.stdscr.addstr(0, 0, str(self))
+
         self.DrawSlots()
         self.DrawLogWin()
         self.DrawInfoWin()
+        if self.Importer:
+            self.Importer.Draw()
+            self.Importer.InfoWin.refresh()
+            if self.Importer.state == self.Importer.STATES.READY:
+                self.Importer.InfoWin.clear()
+                self.Importer = None
 
         self.stdscr.refresh()
         self.mainWin.refresh()
@@ -287,22 +330,39 @@ class slotHolder(portHolder):
         _col1 = kwa.get('col1', None) or curses.color_pair(51)      ## highlighted field
         _col2 = kwa.get('col2', None) or curses.color_pair(118)     ## toggled
 
-        _ym, _xm = self.mainWin.getmaxyx()
+        #_ym, _xm = self.mainWin.getmaxyx()
+        _header2 = "_|_".join([
+            'SS', 
+            'POS0    ',
+            'POS1    ',
+            'INFILE              ',
+            'CH',
+            'LEN      ',
+            'LLOCK',
+            'OUT',
+            'MOD',
+            "OBJ",
+            "",
 
-        _header = f"#### SLOTS  ######## {self.COORDS_MAIN} "
-        while len(_header) < _xm - 1:   _header += "#"
-        self.mainWin.addstr(0, 0, _header, _col0)
+            ])
+
+        self.mainWin.addstr(0, 0, _header2)
 
         _yy = 1
         _ll = 'LLOCK'
         for ix, f in enumerate(self.slots):
-            _infile = os.path.split(f.infile)[-1:][0] if f.infile else 'None'
+            _infile = 'None'
+            if f.infile:
+                _infile = os.path.splitext(os.path.split(f.infile)[-1:][0])[0]
+
             _pos0   = f"{f.pos0:8.2f}"
             _pos1   = f"{f.pos1:8.2f}"
-            _ff     = f"{_infile:^20s}"
+            _ch     = f"{f.ctrl_ch:2x}"
+            _ff     = f"{_infile[:10]:^20s}"
             _dd     = f"{f.duration:9.4f}"
             _bb     = f"{f.bpm:6.2f}"
             _ss     = f"{f.shift_tempo:6.2f}"
+            _po     = f.pitchObj.state if f.pitchObj else 'None'
 
             _attr = _col0
             if ix == self.selected_ix:
@@ -313,7 +373,7 @@ class slotHolder(portHolder):
             self.mainWin.addstr(_yy+ix, 0, _ostr, _attr);   _xx += len(_ostr)
             self.mainWin.addstr(_yy+ix, _xx, " | ", _attr); _xx += len(" | ")
 
-            for ig, g in enumerate([_pos0, _pos1, _ff]): ## _ff
+            for ig, g in enumerate([_pos0, _pos1, _ff, _ch]): ## _ff
                 _tmpattr = _attr
                 if self.field_ix == ig and ix == self.selected_ix:
                     _tmpattr = _col1 | curses.A_REVERSE
@@ -336,15 +396,20 @@ class slotHolder(portHolder):
             self.mainWin.addstr(_yy+ix, _xx, _ll, _attr3);  _xx += len(_ll)
             self.mainWin.addstr(_yy+ix, _xx, ' | ', _attr); _xx += len(" | ")
 
-            for _fix, _file in enumerate([f.outfile, f.modfile]):
+            for _fix, _file in enumerate([f.outfile, f.modfile, _po]):
                 _attr2 = _attr
                 _ostr = '   '
                 if os.path.isfile(_file):
                     _attr2 = _col2
                     _ostr = 'OUT' if _fix == 0 else 'MOD'
 
-                self.mainWin.addstr(_yy+ix, _xx, _ostr, _attr2);    _xx += len(_ostr)
-                self.mainWin.addstr(_yy+ix, _xx, " | ", _attr);     _xx += len(' | ')
+                #try:
+                if True:
+                    self.mainWin.addstr(_yy+ix, _xx, _ostr, _attr2);    _xx += len(_ostr)
+                    self.mainWin.addstr(_yy+ix, _xx, " | ", _attr);     _xx += len(' | ')
+                #except curses.error as cc:
+                #    curses.endwin()
+                #    print(cc)
 
 
     def DrawLogWin(self, **kwa):
@@ -369,11 +434,12 @@ class slotHolder(portHolder):
         #self.infoWin.addstr(0, 0, _header, _attr)
 
         _ratio = _slot.shift_tempo / _slot.bpm
+        _infile = os.path.split(_slot.infile)[-1] if _slot.infile else 'None'
         _lines = [
             f"#### {_slot.slotname.upper()} ######## {self.COORDS_INFO} ####",
             f"pos0:         {_slot.pos0:6.2f}",
             f"pos1:         {_slot.pos1:6.2f}",
-            f"infile:       {_slot.infile}",
+            f"infile:       {_infile}",
             f"p_delta:      {_slot.pos1 - _slot.pos0}",
             f"duration:     {_slot.duration}",
             f"bpm/shift:    {_slot.bpm:6.2f} / {_slot.shift_tempo:6.2f} / {_ratio:6.4f}",
@@ -382,6 +448,7 @@ class slotHolder(portHolder):
             f"outfile:      {os.path.isfile(_slot.outfile)}",
             f"modfile:      {os.path.isfile(_slot.modfile)}",
             f"pitchObj:     {_slot.pitchObj != None}",
+            f"ctrl_ch:      {_slot.ctrl_ch:02x}",
             ]
 
         _yy = 0
@@ -417,12 +484,12 @@ class slotHolder(portHolder):
     def keyDict(self):
         if not hasattr(self, '_keyDict'):
             self._keyDict = {
-                'q' : self.dec_selected_ix,
-                'e' : self.inc_selected_ix,
+                'w' : self.dec_selected_ix,
+                's' : self.inc_selected_ix,
                 'a' : self.dec_field_ix,
                 'd' : self.inc_field_ix,
-                's' : self.DecCursor,
-                'w' : self.IncCursor,
+                'e' : self.IncCursor,
+                'q' : self.DecCursor,
                 'F' : self.dec_resolution_ix,
                 'f' : self.inc_resolution_ix,
                 '[' : self.DoPlayOrig,
@@ -438,6 +505,10 @@ class slotHolder(portHolder):
                 '!' : self.SetSlotPos0,
                 '@' : self.SetSlotPos1,
                 'C' : self.CfgSaveLoad,
+                '-' : self.DecSlotCtrlCh,
+                '=' : self.IncSlotCtrlCh,
+                '+' : self.IncSlotCtrlCh,
+                'F' : self.ImportFile,
                 }
 
         self._keyDict.update({
@@ -465,12 +536,6 @@ class slotHolder(portHolder):
             return
 
         return True
-
-
-    def StopAll(self):
-        #[f.doStop() for f in self.slots]
-        for f in self.slots:
-            f.doStop()
 
 
     ############################################################################

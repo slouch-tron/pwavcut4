@@ -15,7 +15,7 @@ from .defaults import DEFAULT_WAV_IN_DIR, DEFAULT_SRC_OUT_DIR
 ## where to keep this, if we phase 'utils' out.  defaults?
 ## A: maybe here is fine, happy medium where all files converted same way but also,
 ##   handling of the Process is in the class
-INFILE_CONVERT_CMD_FMT = 'ffmpeg -y "{}" -ar 44100 -map_metadata -1 "{}"'
+INFILE_CONVERT_CMD_FMT = 'ffmpeg -y -i "{}" -ar 44100 -map_metadata -1 "{}"'
 
 
 def PYG_SOUND_LOAD(filename):
