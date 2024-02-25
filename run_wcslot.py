@@ -56,6 +56,7 @@ def main_test():
     www.doCut3_out(mod=True)
 
     norm_file = "/tmp/wav_out/NORM_OUT.wav"
+    ## need to put this after the Cutter automatically
     NORMALIZE(www.outfile, norm_file)
     norm_file = "/tmp/wav_out/NORM_MOD.wav"
     NORMALIZE(www.modfile, norm_file)

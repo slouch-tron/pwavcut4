@@ -8,6 +8,7 @@ import pygame
 import shlex, subprocess
 import yaml
 
+## ought to just have our own EXECUTE_CMD maybe?  phase the 'utils' file out?
 from .utils import PYG_SOUND_LOAD, EXECUTE_CMD
 from .defaults import DEFAULT_WAV_IN_DIR, DEFAULT_WAV_OUT_DIR, OK_FILE_TYPES, pr_debug
 

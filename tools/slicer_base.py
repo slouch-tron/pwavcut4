@@ -20,7 +20,7 @@ from .defaults import (
         pr_debug,
         )
 
-from .utils import EW_PROMPT, DOFFMPEG
+from .utils import EW_PROMPT
 from .notes import NOTE_DICT
 
 

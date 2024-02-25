@@ -7,7 +7,7 @@ import hashlib      ## non colliding filenames
 import time
 
 from enum import Enum, auto
-#from .utils import INFILE_CONVERT   
+from .utils import INFILE_CONVERT_CMD_FMT   
 from .defaults import DEFAULT_WAV_IN_DIR
 
 DEBUG       = int(os.environ.get('DEBUG', 1))
@@ -147,8 +147,7 @@ class InfileGetter():
             _print(f"isfile={os.path.isfile(self.convert_target)}, reconvert={_reconvert}")
             _cmd = "sleep 0.3"
             if _reconvert or not os.path.isfile(self.convert_target):
-                _cmd = 'ffmpeg -y -i "{}" -ar 44100 -map_metadata -1 "{}"'.format(
-                    self.copy_target, self.convert_target)
+                _cmd = INFILE_CONVERT_CMD_FMT.format(self.copy_target, self.convert_target)
 
             self.proc = _cmd
             return True

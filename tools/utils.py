@@ -12,6 +12,10 @@ from pydub import AudioSegment
 from .defaults import DEFAULT_WAV_IN_DIR, DEFAULT_SRC_OUT_DIR
 
 
+## where to keep this, if we phase 'utils' out.  defaults?
+## A: maybe here is fine, happy medium where all files converted same way but also,
+##   handling of the Process is in the class
+INFILE_CONVERT_CMD_FMT = 'ffmpeg -y "{}" -ar 44100 -map_metadata -1 "{}"'
 
 
 def PYG_SOUND_LOAD(filename):
@@ -34,6 +38,8 @@ def NORMALIZE(filename, outfile="/tmp/norm1.wav"):
         norm.export(outfile)
 
 
+## no longer using this?
+'''
 def RUN_PROC(cmd, debug=1):     ## less used now
 
     if debug:
@@ -52,10 +58,11 @@ def RUN_PROC(cmd, debug=1):     ## less used now
             print(txt, file=sys.stderr)
 
     return p.returncode == 0
-
+'''
 
 ##	so now: channel split by pydub to temp file, ffmpeg processes to 'standard' file.
 ##	pydub probably does this too but some places we are not in a Class
+''' # mark as 'unchecked' for now
 def DO_STEREO(source='/tmp/wav_in/file1.wav', keep_pan=True, debug=0):
     def _print(txt):
         print(f"dostereo: {txt}")
@@ -94,8 +101,8 @@ def DO_STEREO(source='/tmp/wav_in/file1.wav', keep_pan=True, debug=0):
 
     return True
 
+'''
 #"ffmpeg -y -i {} -ar 44100 -map_metadata -1 {}".format(os.path.join(tdir, pfilename), os.path.join(pdir, wfilename)),
-
 
 
 
@@ -146,8 +153,10 @@ def EXECUTE_CMD(cmd, sout=1, serr=1, timeout=16, endwin=0):
     return _poll
 
 
+
 def INFILE_CONVERT(infile, outfile_fullpath, debug=1):
-    _cmd = f"ffmpeg -y -i \"{infile}\" -ar 44100 -map_metadata -1 \"{outfile_fullpath}\""
+    #_cmd = f"ffmpeg -y -i \"{infile}\" -ar 44100 -map_metadata -1 \"{outfile_fullpath}\""
+    _cmd = INFILE_CONVERT_CMD_FMT.format(infile, outfile_fullpath)
 
     if debug:
         #curses.endwin()
