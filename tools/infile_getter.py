@@ -6,10 +6,11 @@ import shlex, subprocess
 import hashlib      ## non colliding filenames
 import time
 import curses
+import yaml
 
 from enum import Enum, auto
 from .utils import INFILE_CONVERT_CMD_FMT   
-from .defaults import DEFAULT_WAV_IN_DIR
+from .defaults import DEFAULT_WAV_IN_DIR, CFG_PATH
 
 DEBUG       = int(os.environ.get('DEBUG', 0))
 #RECOPY      = int(os.environ.get('RECOPY', 1))
@@ -64,6 +65,7 @@ class InfileGetter():
         self.copy_target    = kwa.get('copy_target', None)
         self.uri            = kwa.get('uri', None)
         #self.stdscr         = kwa.get('stdscr', None)
+
         self.Log            = kwa.get('Log', print)
         self.errors         = []
         self.proc_start     = None
@@ -71,6 +73,8 @@ class InfileGetter():
 
         self.recopy     = int(os.environ.get('RECOPY', 1))
         self.reconvert  = int(os.environ.get('RECONVER', 1))
+
+        self.copy_mode      = self.MODES.FILE
 
 
     def __str__(self):
@@ -116,6 +120,8 @@ class InfileGetter():
                 self.proc_start = None
                 self.proc = None
                 self._state = self.STATES.READY
+                self.Log(f"{self.__class__.__name__}.state = {self.state.name}")
+                self.InfoWin and self.InfoWin.clear()
             else:
                 self.errors.append(f"FAIL, proc poll={_poll}")
                 self._state = self.STATES.ERROR
@@ -182,7 +188,7 @@ class InfileGetter():
 
     def Convert(self, reconvert=False):
         def _print(txt, err=0):
-            self.Log(f"Convert | {txt}")
+            self.Log(f"Convert | {txt}         ")
             DEBUG and print(f"\033[33mConvert | {txt}\033[0m", file=sys.stderr)
             err and self.errors.append(err)
 
@@ -248,6 +254,7 @@ class InfileGetter():
     def Copy_YTDL(self):       return self._WebCopy(self.MODES.YTDL)
     def Copy_FILE(self):       return self._WebCopy(self.MODES.FILE)
     def Copy_HTTP(self):       return self._WebCopy(self.MODES.HTTP)
+    def Copy(self):            return self._WebCopy(self.copy_mode)
 
     def Cancel(self):
         self.Log(f"cancel running {self.__class__.__name__}")
@@ -311,7 +318,7 @@ class InfileGetter():
         _yy = 2
 
         _lines = [
-            f"mode:     {self.copy_mode.name}",
+            f"mode:     {self.copy_mode.name}     ",
             f"recopy:   {self.recopy == 1}",
             f"reconv:   {self.reconvert == 1}",
             f"uri:      {str(self.uri)}",
@@ -369,7 +376,7 @@ class InfileGetter():
             self.Cancel()
             return
 
-        _prompt = "enter FILENAME on this filesystem to import: "
+        _prompt = f"enter FILENAME or LINK to import using {self.copy_mode.name} method: "
         _prompt += f"(prev '{self.uri}')" if self.uri else ""
 
         try:
@@ -386,7 +393,9 @@ class InfileGetter():
                     return
                 self.uri = str(value)
 
-            self.Copy_FILE()
+            #self.Copy_FILE()
+            self.Log(f"try Copy:{self.copy_mode.name}")
+            self.Copy()
 
         except KeyboardInterrupt:
             self._state = self.STATES.INIT
@@ -395,6 +404,8 @@ class InfileGetter():
             _print(f"value must be string: '{value}'")
             
 
+    ## config
+    #######################################################################
     @property
     def cfg_filename(self):
         if not hasattr(self, '_cfg_filename'):
@@ -410,16 +421,16 @@ class InfileGetter():
         DATA = dict()
 
         _condition = self.uri or self.copy_target or self.convert_target
-        _condition          and DATA.update(dict(mode=self.mode.value))
-        self.uri            and DATA.update(dict(usr=self.uri))
+        _condition          and DATA.update(dict(copy_mode=self.copy_mode.value))
+        self.uri            and DATA.update(dict(uri=self.uri))
         self.copy_target    and DATA.update(dict(copy_target=self.copy_target))
         self.convert_target and DATA.update(dict(convert_target=self.convert_target))
         
         
         if DATA:
             ## collate w/ existing file data
-            if os.path.isfile(self.cfg_file):
-                with open(self.cfg_file, 'r') as cfgf:
+            if os.path.isfile(self.cfg_filename):
+                with open(self.cfg_filename, 'r') as cfgf:
                     PREV = yaml.full_load(cfgf)
 
                 PREV.update({ self.__class__.__name__ : DATA})
@@ -428,15 +439,20 @@ class InfileGetter():
                 yaml.dump(PREV, cfgf)
 
     def CfgLoad(self):
+        DATA = dict()
         if os.path.isfile(self.cfg_filename):
-            DATA = yaml.full_load(cfgf)
+            with open(self.cfg_filename, 'r') as cfgf:
+                DATA = yaml.full_load(cfgf)
 
         _data = DATA.get(self.__class__.__name__, {})
         if _data:
-            pass
-            #_val = _data.get('mode', None); if _val: self.mode = States(_val)
-            #_val = _data.get('uri', None);  if _val: self.uri = _val
-            #_val = _data
+            self.uri     = _data.get('uri', self.uri)
+            self.copy_target    = _data.get('copy_target', self.copy_target)
+            self.convert_target = _data.get('convert_target', self.convert_target)
+            _val = _data.get('copy_mode', None)
+            if _val: 
+                self.copy_mode = self.MODES(_val)
+
 
 
 

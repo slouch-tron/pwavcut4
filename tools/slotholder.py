@@ -468,7 +468,10 @@ class slotHolder(portHolder):
                 for s in self.slots:
                     s.CfgSave() if _chr in 'Ss' else s.CfgLoad()
 
-                self.Log("SAVED" if _chr in 'Ss' else "LOADED")
+                if self.Importer:
+                    self.Importer.CfgSave() if _chr in 'Ss' else self.Importer.CfgLoad()
+
+                self.Log("CONFIG SAVED" if _chr in 'Ss' else "CONFIG LOADED")
                 return True
 
 
