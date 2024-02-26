@@ -12,26 +12,39 @@ from .utils import INFILE_CONVERT_CMD_FMT
 from .defaults import DEFAULT_WAV_IN_DIR
 
 DEBUG       = int(os.environ.get('DEBUG', 0))
-RECOPY      = int(os.environ.get('RECOPY', 1))
-RECONVERT   = int(os.environ.get('RECONVERT', 1))
+#RECOPY      = int(os.environ.get('RECOPY', 1))
+#RECONVERT   = int(os.environ.get('RECONVERT', 1))
 
 DEFAULT_DEST_DIR    = "/tmp/wav_in/"
 DEFAULT_CONVERT_DIR = "/tmp/wav_convert/"
 
 
 class States(Enum):
-    INIT        = auto()
-    COPY        = auto()
-    CONVERT     = auto()
-    READY       = auto()
-    ERROR       = auto()
-    CANCEL      = auto()
+    INIT        = auto()    ## maybe theres 'uri', could be link or filename
+    COPY        = auto()    ## copy working (wget, local FS copy), save to copy_target
+    CONVERT     = auto()    ## convert working, ffmpeg convert copy_target to convert_target
+    READY       = auto()    ## ready for use by pwavcut/etc
+    ERROR       = auto()    ## check self.errors
+    CANCEL      = auto()    ## was cancelled
 
 class CopyModes(Enum):
     YTDL    = auto()
     SCP     = auto()
     FILE    = auto()
     HTTP    = auto()
+
+STATECOLORS = dict(
+    INIT    = 28,
+    COPY    = 190,
+    CONVERT = 190,
+    READY   = 40,
+    ERROR   = 124,
+    CANCEL  = 186,
+    )
+
+BLINKCOLORS = [56, 66, 76, 86]
+BLINKCOLORS = [232, 238, 244, 250, 255, 231, 230, 229, 228, 227, 226, 225, 232, 232, 232, 232]
+BLINKCOLORS = [226, 232, 227, 232, 228, 232, 229, 232, 230, 232, 231, 232]
 
 
 class InfileGetter():
@@ -55,6 +68,9 @@ class InfileGetter():
         self.errors         = []
         self.proc_start     = None
         self.last_cmd       = None
+
+        self.recopy     = int(os.environ.get('RECOPY', 1))
+        self.reconvert  = int(os.environ.get('RECONVER', 1))
 
 
     def __str__(self):
@@ -111,6 +127,22 @@ class InfileGetter():
 
         return self._state
 
+    @property
+    def copy_mode(self):
+        if not hasattr(self, '_copy_mode'):
+            self._copy_mode = self.MODES.FILE
+
+        return self._copy_mode
+
+    @copy_mode.setter
+    def copy_mode(self, val):
+        if not isinstance(val, self.MODES):
+            print(f"value '{val}' is not {self.MODES}")
+            raise TypeError     ## value is not instance of 'CopyMode'?
+
+        self._copy_mode = val
+
+
     #######################################################################
 
     @property
@@ -155,7 +187,8 @@ class InfileGetter():
             err and self.errors.append(err)
 
         if os.path.isfile(self.copy_target):
-            _reconvert = reconvert or RECONVERT
+            #_reconvert = reconvert or RECONVERT
+            _reconvert = self.reconvert
             _print(f"{self.convert_target}")
             _print(f"isfile={os.path.isfile(self.convert_target)}, reconvert={_reconvert}")
             _cmd = "sleep 0.3"
@@ -175,7 +208,8 @@ class InfileGetter():
             DEBUG and print(f"\033[33mCopy | {txt}\033[0m", file=sys.stderr)
             err and self.errors.append(txt)
 
-        _recopy = recopy or RECOPY
+        #_recopy = recopy or RECOPY
+        _recopy = self.recopy
         _print(f"mode={str(mode)}, recopy={_recopy}")
 
         if self.uri:
@@ -238,17 +272,19 @@ class InfileGetter():
         #self._InfoWin.keypad(1)
             
 
+    @property
+    def StateColors(self):
+        if not hasattr(self, '_StateColors'):
+            self._StateColors = dict()
+
     def Draw(self, **kwa):
-        col0 = kwa.get('col0', curses.color_pair(56))
-        col1 = kwa.get('col1', curses.color_pair(66))
-        col2 = kwa.get('col1', curses.color_pair(76))
-        col3 = kwa.get('col1', curses.color_pair(86))
-        blink = kwa.get('blink', [56, 66, 76, 86])
+        blink = kwa.get('blink', BLINKCOLORS)
 
         _time = time.time()
-        _bix  = int(_time * 100) % len(blink)
-        _bcol = curses.color_pair(_bix)
-        _attr = curses.color_pair(blink[0])
+        #_bix  = int(_time * 100) % len(blink)
+        #_bcol = curses.color_pair(_bix)
+        #_attr = curses.color_pair(86)
+        _attr = curses.color_pair(56)
 
         _ee = "elapsed:    "
         _ee += "{:6.2f} sec".format(_time - self.proc_start) if self.proc_start else ""
@@ -258,12 +294,26 @@ class InfileGetter():
         if self.copy_target:    _cc = os.path.splitext(os.path.split(self.copy_target)[-1])[0]
         if self.convert_target: _cv = os.path.splitext(os.path.split(self.convert_target)[-1])[0]
 
+        _attr2 = _attr
+        if self.proc:
+        #if False:
+            _bix  = int(_time * 100) % len(blink)
+            _bcol = curses.color_pair(_bix)
+            _attr2 = curses.color_pair(_bix)
+        else:
+            _col = STATECOLORS.get(self.state.name, None)
+            if _col:
+                _attr2 = curses.color_pair(_col)
+
         self.InfoWin.addstr(0, 0, self.__class__.__name__, _attr)
         self.InfoWin.addstr(1, 0, "state:    ", _attr)
-        self.InfoWin.addstr(1, 10, self.state.name, _bcol if self.proc else _attr)
+        self.InfoWin.addstr(1, 10, self.state.name, _attr2)
         _yy = 2
 
         _lines = [
+            f"mode:     {self.copy_mode.name}",
+            f"recopy:   {self.recopy == 1}",
+            f"reconv:   {self.reconvert == 1}",
             f"uri:      {str(self.uri)}",
             #f"copy:     {_cc}",
             f"convert:  {_cv}",
@@ -344,6 +394,49 @@ class InfileGetter():
         except TypeError:
             _print(f"value must be string: '{value}'")
             
+
+    @property
+    def cfg_filename(self):
+        if not hasattr(self, '_cfg_filename'):
+            _file = os.path.splitext(os.path.split(sys.argv[0])[1])[0] + ".yml"
+            #self._cfg_filename = _file
+            self._cfg_filename = os.path.join(CFG_PATH, _file)
+
+        return self._cfg_filename
+
+
+    def CfgSave(self):
+        PREV = dict()
+        DATA = dict()
+
+        _condition = self.uri or self.copy_target or self.convert_target
+        _condition          and DATA.update(dict(mode=self.mode.value))
+        self.uri            and DATA.update(dict(usr=self.uri))
+        self.copy_target    and DATA.update(dict(copy_target=self.copy_target))
+        self.convert_target and DATA.update(dict(convert_target=self.convert_target))
+        
+        
+        if DATA:
+            ## collate w/ existing file data
+            if os.path.isfile(self.cfg_file):
+                with open(self.cfg_file, 'r') as cfgf:
+                    PREV = yaml.full_load(cfgf)
+
+                PREV.update({ self.__class__.__name__ : DATA})
+
+            with open(self.cfg_filename, 'w') as cfgf:
+                yaml.dump(PREV, cfgf)
+
+    def CfgLoad(self):
+        if os.path.isfile(self.cfg_filename):
+            DATA = yaml.full_load(cfgf)
+
+        _data = DATA.get(self.__class__.__name__, {})
+        if _data:
+            pass
+            #_val = _data.get('mode', None); if _val: self.mode = States(_val)
+            #_val = _data.get('uri', None);  if _val: self.uri = _val
+            #_val = _data
 
 
 

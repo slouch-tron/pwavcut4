@@ -66,7 +66,7 @@ class wcSlot():
 
         self.pitchObj = None
 
-        self.Log(f"{self.slotname} initialized!")
+        #self.Log(f"{self.slotname} initialized!")
 
 
     def __str__(self):

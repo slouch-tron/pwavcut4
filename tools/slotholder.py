@@ -315,9 +315,6 @@ class slotHolder(portHolder):
         if self.Importer:
             self.Importer.Draw()
             self.Importer.InfoWin.refresh()
-            if self.Importer.state == self.Importer.STATES.READY:
-                self.Importer.InfoWin.clear()
-                self.Importer = None
 
         self.stdscr.refresh()
         self.mainWin.refresh()
@@ -426,12 +423,9 @@ class slotHolder(portHolder):
 
     def DrawInfoWin(self, **kwa):
         _ym, _xm = self.infoWin.getmaxyx() 
-        _attr = kwa.get('col0', None) or curses.color_pair(36)
+        _attr = kwa.get('col0', curses.color_pair(36))
 
         _slot = self.selectedSlot
-        #_header = f"#### {_slot.slotname.upper()} ######## {self.COORDS_INFO} "
-        #_header += "#"*(_xm - 1 - len(_header))
-        #self.infoWin.addstr(0, 0, _header, _attr)
 
         _ratio = _slot.shift_tempo / _slot.bpm
         _infile = os.path.split(_slot.infile)[-1] if _slot.infile else 'None'
@@ -451,7 +445,7 @@ class slotHolder(portHolder):
             f"ctrl_ch:      {_slot.ctrl_ch:02x}",
             ]
 
-        _yy = 0
+        _yy = ix = 0
         for ix, line in enumerate(_lines):
             _line = f"{ix:02d} | {line}"
             _line += '_'*(_xm - 1 - len(_line))
