@@ -23,6 +23,8 @@ from .defaults import (
 from .utils import EW_PROMPT
 from .notes import NOTE_DICT
 
+DEFAULT_CTRL_CH = 1
+
 
 class States(Enum):
     INIT    = auto()
@@ -48,6 +50,8 @@ class Slicer(portHolder):
 
     STATES = States
 
+    CH_MAX = 10
+
     def __init__(self, **kwa):
         self.id         = Slicer.ID
         Slicer.ID += 1
@@ -60,6 +64,7 @@ class Slicer(portHolder):
         self.basedir    = kwa.get('basedir', None) or DEFAULT_SRC_OUT_DIR
         self.bpm        = kwa.get('bpm', 92.0)
         self.shift_tempo = kwa.get('shift_tempo', 92.0)
+        #self.ctrl_ch    = kwa.get('ctrl_ch', DEFAULT_CTRL_CH)
         self.multitrig  = False
         self.mono       = False
 
@@ -122,6 +127,21 @@ class Slicer(portHolder):
             self.stdscr.clear()
 
         return self._state
+
+
+    @property
+    def ctrl_ch(self):
+        if not hasattr(self, '_ctrl_ch'):
+            self._ctrl_ch = DEFAULT_CTRL_CH
+
+        return self._ctrl_ch
+
+    @ctrl_ch.setter
+    def ctrl_ch(self, val):
+        self._ctrl_ch = val % self.CH_MAX
+
+    def inc_ctrl_ch(self):          self.ctrl_ch += 1
+    def dec_ctrl_ch(self):          self.ctrl_ch -= 1
 
 
     def CmdQueueAdd(self, cmd):
@@ -384,4 +404,5 @@ class Slicer(portHolder):
 ########################################################################################
 ########################################################################################
 	
+
 

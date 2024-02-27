@@ -9,6 +9,7 @@ from tools import wcSlot
 from tools import slotHolder
 from tools import Slicer, PitchesSlicer
 from tools import CURSE_INIT
+from tools import NotesWin
 
 fff = os.environ.get('INFILE', "/tmp/wav_out/slot00/OUT.wav")
 
@@ -21,6 +22,7 @@ def main_test():
     print(sss)
     #sss.Slice()
     #sss.StartSliceTask()
+
     sss.Run(terminal=(not CURSE))
 
     
