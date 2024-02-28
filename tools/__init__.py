@@ -4,6 +4,7 @@ from .slicer_base import Slicer
 from .slicer_pitches import PitchesSlicer
 from .infile_getter import InfileGetter
 from .notes_window import NotesWin
+from .portholder import GET_PORT
 
 from .utils import INFILE_CONVERT, NORMALIZE
 from .defaults import CURSE_INIT, GET_CFG
