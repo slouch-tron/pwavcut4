@@ -250,6 +250,14 @@ class Slicer(portHolder):
         print(self)
 
 
+    @property
+    def MsgDict(self):
+        if not hasattr(self, '_MsgDict'):
+            self._MsgDict = {
+                }
+
+        return self._MsgDict
+
     def msgCheck(self, msg):
         if not msg:
             return

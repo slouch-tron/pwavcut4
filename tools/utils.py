@@ -153,7 +153,6 @@ def EXECUTE_CMD(cmd, sout=1, serr=1, timeout=16, endwin=0):
     return _poll
 
 
-
 def INFILE_CONVERT(infile, outfile_fullpath, debug=1):
     #_cmd = f"ffmpeg -y -i \"{infile}\" -ar 44100 -map_metadata -1 \"{outfile_fullpath}\""
     _cmd = INFILE_CONVERT_CMD_FMT.format(infile, outfile_fullpath)
@@ -164,17 +163,6 @@ def INFILE_CONVERT(infile, outfile_fullpath, debug=1):
 
     return EXECUTE_CMD(_cmd)
     
-
-def EW_PROMPT(prompt="enter a value: ", vtype=float):
-    curses.endwin()
-    value = input(prompt)
-    if value and value != '\n':
-        try:
-            return vtype(value)
-        except ValueError:
-            pass
-
-
 
 ## Used by pitch slicer class
 def DOFFMPEG(
@@ -242,4 +230,34 @@ def DOFFMPEG(
         return cmd
 
     
+def EW_PROMPT(prompt="enter a value: ", vtype=float):
+    curses.endwin()
+    value = input(prompt)
+    if value and value != '\n':
+        try:
+            return vtype(value)
+        except ValueError:
+            pass
+
+
+def DRAWHELPWIN(obj, dict_name='keyDict'):
+    '''Print Help Window for keyboard'''
+    _win = curses.newwin(40, 80, 10, 10)
+    _attr = curses.color_pair(37) | curses.A_REVERSE
+    _yy = 0
+
+    _kDict = getattr(obj, dict_name, None)
+    if not isinstance(_kDict, dict):
+        return 
+
+    for k, v in _kDict.items():
+        _v = v[0] if isinstance(v, list) else v
+        _ostr = f"'{str(k):2s}' | {_v.__doc__ or _v.__name__}"
+        _win.addstr(_yy, 0, _ostr, _attr)
+        _yy += 1
+
+    _win.refresh()
+    ik = 0
+    while ik < 1:
+        ik = obj.stdscr.getch()
 

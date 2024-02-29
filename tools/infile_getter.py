@@ -90,48 +90,83 @@ class InfileGetter():
     def __del__(self):
         self.proc = False
 
+    def logDecor(func, *aa, **kwa):
+        def inner(self, *aa, **kwa):
+            _head = f"{self.__class__.__name__}.{func.__name__}"
+            _ostr = _head
+            _ostr += f", {str(aa)}" if aa else ""
+            _ostr += f", {str(kwa)}" if kwa else ""
+            self.Log(_ostr)
+
+            _start  = time.time()
+            _return = func(self, *aa, **kwa)
+            _finish = (time.time() - _start) #* 1000
+
+            ## makes no sense for proc-starter function that returns immediately
+            _ostr = _head + f", return '{_return}', {_finish:.2f} sec elapsed"
+            self.Log(_ostr)
+            return _return
+
+        return inner
+
 
     @property
     def state(self):
         if not hasattr(self, '_state'):
             self._state = self.STATES.INIT
+            self.Log(f"{self.__class__.__name__}.state = {self._state.name}")
 
-        if self._state in [self.STATES.ERROR, self.STATES.CANCEL]:
+        return self._state 
+
+    @state.setter
+    def state(self, val):
+        _old = self._state 
+        self._state = val
+
+        if self._state != _old:
+            self.Log(f"{self.__class__.__name__}.state: {_old.name}->{self._state.name}")
+
+
+    def Update(self):
+        if self.state in [self.STATES.ERROR, self.STATES.CANCEL]:
             self.proc = False
-            return self._state
+            return self.state
 
-        if self._state == self.STATES.COPY:
+        if self.state == self.STATES.COPY:
             _poll = self.proc.poll()
             if _poll == None:   ## still running
                 pass
             elif _poll == 0:    ## good result
                 self.proc_start = None
-                self._state = self.STATES.CONVERT
+                self.state = self.STATES.CONVERT
                 self.Convert()
             else:
                 self.errors.append(f"FAIL, proc poll={_poll}")
-                self._state = self.STATES.ERROR
+                self.state = self.STATES.ERROR
 
-        elif self._state == self.STATES.CONVERT:
+        elif self.state == self.STATES.CONVERT:
             _poll = self.proc.poll()
             if _poll == None:
                 pass
             elif _poll == 0: 
                 self.proc_start = None
                 self.proc = None
-                self._state = self.STATES.READY
-                self.Log(f"{self.__class__.__name__}.state = {self.state.name}")
-                self.InfoWin and self.InfoWin.clear()
+                self.state = self.STATES.READY
+                #self.Log(f"{self.__class__.__name__}.state = {self.state.name}")
+                #self.InfoWin and self.InfoWin.clear()  ## dont do draw stuff outside 'Draw'!
             else:
                 self.errors.append(f"FAIL, proc poll={_poll}")
-                self._state = self.STATES.ERROR
+                self.state = self.STATES.ERROR
 
-        elif self._state == self.STATES.READY:
+        elif self.state == self.STATES.READY:
             if not os.path.isfile(self.convert_target):
                 self.errors.append(f"was READY but file went missing: '{self.convert_target}'")
-                self._state = self.STATES.ERROR
+                self.state = self.STATES.ERROR
 
-        return self._state
+        else:
+            raise TypeError
+
+
 
     @property
     def copy_mode(self):
@@ -143,11 +178,10 @@ class InfileGetter():
     @copy_mode.setter
     def copy_mode(self, val):
         if not isinstance(val, self.MODES):
-            print(f"value '{val}' is not {self.MODES}")
+            print(f"copy_mode.setter: value '{val}' is not {self.MODES}")
             raise TypeError     ## value is not instance of 'CopyMode'?
 
         self._copy_mode = val
-
 
     #######################################################################
 
@@ -186,28 +220,7 @@ class InfileGetter():
 
     #######################################################################
 
-    def Convert(self, reconvert=False):
-        def _print(txt, err=0):
-            self.Log(f"Convert | {txt}         ")
-            DEBUG and print(f"\033[33mConvert | {txt}\033[0m", file=sys.stderr)
-            err and self.errors.append(err)
-
-        if os.path.isfile(self.copy_target):
-            #_reconvert = reconvert or RECONVERT
-            _reconvert = self.reconvert
-            _print(f"{self.convert_target}")
-            _print(f"isfile={os.path.isfile(self.convert_target)}, reconvert={_reconvert}")
-            _cmd = "sleep 0.3"
-            if _reconvert or not os.path.isfile(self.convert_target):
-                _cmd = INFILE_CONVERT_CMD_FMT.format(self.copy_target, self.convert_target)
-
-            self.proc = _cmd
-            return True
-
-        else:
-            _print(f"no file copy_target='{self.copy_target}'", err=1)
-
-
+    @logDecor
     def _WebCopy(self, mode=CopyModes.SCP, recopy=False):
         def _print(txt, err=0):
             self.Log(f"Copy | {txt}")
@@ -232,13 +245,13 @@ class InfileGetter():
                 }.get(mode, None)
 
             if _cmd:
-                _print(f"{self.copy_target}")
-                _print(f"isfile={os.path.isfile(self.copy_target)}")
+                _print(f"FROM: {self.uri}")
+                _print(f"TO:   {self.copy_target} (isfile={os.path.isfile(self.copy_target)})")
                 if not _recopy and os.path.isfile(self.copy_target):
                     _cmd = "sleep 0.2"
 
                 self.proc = _cmd
-                self._state = self.STATES.COPY
+                self.state = self.STATES.COPY
                 return True
 
             else:
@@ -256,11 +269,36 @@ class InfileGetter():
     def Copy_HTTP(self):       return self._WebCopy(self.MODES.HTTP)
     def Copy(self):            return self._WebCopy(self.copy_mode)
 
+
+    @logDecor
+    def Convert(self, reconvert=False):
+        def _print(txt, err=0):
+            self.Log(f"Convert | {txt}         ")
+            DEBUG and print(f"\033[33mConvert | {txt}\033[0m", file=sys.stderr)
+            err and self.errors.append(err)
+
+        if os.path.isfile(self.copy_target):
+            #_reconvert = reconvert or RECONVERT
+            _reconvert = self.reconvert
+            _print(f"reconvert={_reconvert}")
+            _print(f"FROM: {self.copy_target}")
+            _print(f"TO:   {self.convert_target} (isfile={os.path.isfile(self.convert_target)})")
+            _cmd = "sleep 0.2"      ## cmd for proc that does nothing!
+            if _reconvert or not os.path.isfile(self.convert_target):
+                _cmd = INFILE_CONVERT_CMD_FMT.format(self.copy_target, self.convert_target)
+
+            self.proc = _cmd
+            return True
+
+        else:
+            _print(f"no file copy_target='{self.copy_target}'", err=1)
+
+
     def Cancel(self):
         self.Log(f"cancel running {self.__class__.__name__}")
         self.proc = False
         self.proc_start = None
-        self._state = self.STATES.CANCEL
+        self.state = self.STATES.CANCEL
 
     #######################################################################
 
@@ -398,7 +436,7 @@ class InfileGetter():
             self.Copy()
 
         except KeyboardInterrupt:
-            self._state = self.STATES.INIT
+            self.state = self.STATES.INIT
             _print("cancelled file prompt")
         except TypeError:
             _print(f"value must be string: '{value}'")

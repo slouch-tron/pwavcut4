@@ -41,7 +41,7 @@ class wcSlot():
         wcSlot.ID   += 1
 
         self.slotnum    = kwa.get('slotnum', 0)
-        self.stdscr     = kwa.get('stdscr', None)
+        #self.stdscr     = kwa.get('stdscr', None)
         self.Log        = kwa.get('Log', pr_debug)
         self.debug      = kwa.get('debug', 0)
         self.ctrl_ch    = kwa.get('ctrl_ch', self.ctrl_ch)

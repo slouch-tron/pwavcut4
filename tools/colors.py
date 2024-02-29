@@ -4,6 +4,12 @@
         to stretch or shrink them to certain number of steps.
 '''
 
+## these are in infile_getter, should we define centrally here?
+BLINKCOLORS = [56, 66, 76, 86]
+BLINKCOLORS = [232, 238, 244, 250, 255, 231, 230, 229, 228, 227, 226, 225, 232, 232, 232, 232]
+BLINKCOLORS = [226, 232, 227, 232, 228, 232, 229, 232, 230, 232, 231, 232]
+
+
 def get_grad0(rate=100, debug=1):
     _clist = list(range(100, 200)) + [200] + list(range(200, 99, -1))
     _olist = list()

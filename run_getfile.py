@@ -13,12 +13,16 @@ def main_test():
 
     iii.as_cli()
 
-    while True:
-        print(iii)
-        time.sleep(0.4)
-        if iii.state == iii.STATES.READY:
+    try:
+        while True:
             print(iii)
-            break
+            iii.Update()
+            time.sleep(0.1)
+            if iii.state == iii.STATES.READY:
+                print(iii)
+                break
+    except KeyboardInterrupt:
+        iii.Cancel()
 
 
 if __name__ == '__main__':

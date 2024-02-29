@@ -15,7 +15,8 @@ from .defaults import (
         CURSE_INIT, 
         )
 
-from .utils import EW_PROMPT
+from .utils import EW_PROMPT, DRAWHELPWIN
+from .draw_slots_class import DrawSlotsClass
 
 
 class slotHolder(portHolder):
@@ -190,15 +191,18 @@ class slotHolder(portHolder):
     ## Slot functions
     ############################################################################
     def DoCutOut(self, mod=False):
+        '''Cut selectedSlot INFILE with region p0-p1'''
         _slot = self.selectedSlot
         _func = _slot.doCut3_mod if mod else _slot.doCut3_out
         _func()
 
     def DoCutMod(self):
+        '''Cut selectedSlot INFILE with region p0-p1, use BPM/SHIFT ratio'''
         self.DoCutOut(mod=True)
 
 
     def DoPlayOut(self, mod=False):
+        '''Play OUT file'''
         _slot = self.selectedSlot
         _func = _slot.doPlay2_mod if mod else _slot.doPlay2_out
 
@@ -206,10 +210,12 @@ class slotHolder(portHolder):
 
 
     def DoPlayMod(self, mod=False):
+        '''Play MOD file'''
         self.DoPlayOut(mod=True)
 
 
     def DoPlayOrig(self):
+        '''Play selectedSlot INFILE with region p0-p1, no cutting'''
         self.selectedSlot.doPlay_orig()
 
 
@@ -220,6 +226,7 @@ class slotHolder(portHolder):
 
 
     def IncCursor(self, dec=False):
+        '''Increment Field by Resolution'''
         if self.field_ix == 0:
             self.selectedSlot.pos0 += self.resolution * (-1 if dec else 1)
         elif self.field_ix == 1:
@@ -229,6 +236,7 @@ class slotHolder(portHolder):
             else:       self.selectedSlot.get_infile_next()
 
     def DecCursor(self):
+        '''Decrement Field by Resolution'''
         self.IncCursor(dec=True)
 
 
@@ -308,6 +316,7 @@ class slotHolder(portHolder):
 
     def Draw(self):
         self.stdscr.addstr(0, 0, str(self))
+        #self.stdscr.addstr(1, 0, str(list(self.keyDict.keys())))
 
         self.DrawSlots()
         self.DrawLogWin()
@@ -322,7 +331,12 @@ class slotHolder(portHolder):
         self.infoWin.refresh()
 
 
-    def DrawSlots(self, **kwa):
+    ## incredible this works.  probably terrible practice?
+    ## one bad thing from the prev. over-complicated project was, too many files for 1 'draw'
+    def DrawSlots(self, **kwa):     DrawSlotsClass.DrawSlots(self, **kwa)
+
+    '''
+    def DrawSlots222(self, **kwa):
         _col0 = kwa.get('col0', None) or curses.color_pair(24)      ## unselected, regular
         _col1 = kwa.get('col1', None) or curses.color_pair(51)      ## highlighted field
         _col2 = kwa.get('col2', None) or curses.color_pair(118)     ## toggled
@@ -407,7 +421,7 @@ class slotHolder(portHolder):
                 #except curses.error as cc:
                 #    curses.endwin()
                 #    print(cc)
-
+    '''
 
     def DrawLogWin(self, **kwa):
         _attr = kwa.get('col0', None) or curses.color_pair(20)
@@ -453,6 +467,11 @@ class slotHolder(portHolder):
 
         _yy = ix
 
+
+    def DrawHelpWin(self):
+        DRAWHELPWIN(self, 'keyDict')
+        #DRAWHELPWIN(self, 'msgDict')
+	
 
     def CfgSaveLoad(self):
         self.stdscr.addstr(2, 0, "(s)ave or (l)oad config?", curses.A_REVERSE)
@@ -506,6 +525,7 @@ class slotHolder(portHolder):
                 '=' : self.IncSlotCtrlCh,
                 '+' : self.IncSlotCtrlCh,
                 'F' : self.ImportFile,
+                'H' : self.DrawHelpWin,
                 }
 
         self._keyDict.update({
@@ -577,5 +597,4 @@ class slotHolder(portHolder):
 
 ############################################################################
 ############################################################################
-	
 
