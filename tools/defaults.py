@@ -5,9 +5,10 @@ import curses
 import platform
 import yaml
 
-DEFAULT_MIDI_LISTEN_CH      = 15
+DEFAULT_MIDI_LISTEN_CH      = 13
+DEFAULT_MIDI_LISTEN_CH_OUT  = 13
 DEFAULT_MIDI_LISTEN_CH_MOD  = 14
-DEFAULT_MIDI_LISTEN_CH_KIT  = 13
+DEFAULT_MIDI_LISTEN_CH_KIT  = 15
 
 DIR_BASE = "/tmp"
 DEFAULT_WAV_IN_DIR  = os.path.join(DIR_BASE, 'wav_in')
@@ -48,8 +49,10 @@ DEFAULT_MIDI_CCS = dict(
 ######################################################################
 ######################################################################
 def CURSE_INIT(stdscr):
-    curses.initscr()
-    curses.start_color()
+    ## dont see these 2 in p_wavcut3
+    ## ok to do here, since 'global'?
+    #curses.initscr()
+    #curses.start_color()
     curses.init_color(0,0,0,0)
     curses.curs_set(0)
     curses.noecho()

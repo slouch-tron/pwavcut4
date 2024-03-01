@@ -11,7 +11,7 @@ from .wcslot import wcSlot
 from .portholder import portHolder
 from .infile_getter import InfileGetter
 from .defaults import (
-        DEFAULT_MIDI_LISTEN_CH, DEFAULT_MIDI_LISTEN_CH_MOD, DEFAULT_MIDI_LISTEN_CH_KIT, 
+        DEFAULT_MIDI_LISTEN_CH_OUT, DEFAULT_MIDI_LISTEN_CH_MOD, DEFAULT_MIDI_LISTEN_CH_KIT, 
         CURSE_INIT, 
         )
 
@@ -26,18 +26,21 @@ class slotHolder(portHolder):
     COORDS_INFO = (20, 48, 22, 1)
     COORDS_LOG  = (19, 100, 40, 1)
 
-    MIDI_CH_CTL = DEFAULT_MIDI_LISTEN_CH
+    MIDI_CH_CTL = DEFAULT_MIDI_LISTEN_CH_OUT
     MIDI_CH_MOD = DEFAULT_MIDI_LISTEN_CH_MOD
     MIDI_CH_KIT = DEFAULT_MIDI_LISTEN_CH_KIT
 
-    def __init__(self, **kwa):
+    def __init__(self, stdscr, **kwa):
         self.slot_count = kwa.get('slot_count', 8)
 
         self.slots = []
         for s in range(self.slot_count):
             self.slots.append(wcSlot(slotnum=s, ctrl_ch=s, Log=self.Log))
 
-        self.stdscr     = curses.wrapper(CURSE_INIT)
+        ## 240229 - curse.wrapper(main), initscr, then make SlotHolder and Run
+        ##  otherwise arrow keys might not work
+        self.stdscr     = stdscr
+        #self.stdscr     = curses.wrapper(CURSE_INIT)
         self.last_func  = 'None'
         self.last_msg_i = None
         self.last_msg_c = None
@@ -317,6 +320,7 @@ class slotHolder(portHolder):
     def Draw(self):
         self.stdscr.addstr(0, 0, str(self))
         #self.stdscr.addstr(1, 0, str(list(self.keyDict.keys())))
+        self.stdscr.addstr(1, 0, str(self.port_i))
 
         self.DrawSlots()
         self.DrawLogWin()
@@ -526,6 +530,8 @@ class slotHolder(portHolder):
                 '+' : self.IncSlotCtrlCh,
                 'F' : self.ImportFile,
                 'H' : self.DrawHelpWin,
+                260 : self.dec_selected_ix,
+                261 : self.inc_selected_ix,
                 }
 
         self._keyDict.update({
@@ -537,22 +543,37 @@ class slotHolder(portHolder):
 
 
     def keyCheck(self, ikey):
+        if not hasattr(self, '_arrowKeyDict'):
+            self._arrowKeyDict = {
+                curses.KEY_LEFT     : self.dec_field_ix,
+                curses.KEY_RIGHT    : self.inc_field_ix,
+                curses.KEY_UP       : self.IncCursor,
+                curses.KEY_DOWN     : self.DecCursor,
+                curses.KEY_BACKSPACE : self.StopAll,
+                }
+
+        _func = self._arrowKeyDict.get(ikey, None)
+        if _func:
+            self.last_func = _func.__name__
+            _func()
+            return True
+            
+
+        ## doesnt work but why??
+        ## maybe- need to pass in same 'stdscr' to anything with windowing?
+        ## 240229 - works when we 'initscr' more outside the class
+        #if   ikey == curses.KEY_LEFT:   self.dec_field_ix()
+        #elif ikey == curses.KEY_RIGHT:  self.inc_field_ix()
+        #elif ikey == curses.KEY_UP:     self.IncCursor()
+        #elif ikey == curses.KEY_DOWN:   self.DecCursor()
+
         _func = self.keyDict.get(chr(ikey), None)
+
         if _func:
             self.last_func = _func.__name__
             _func()
             return True
 
-        ## doesnt work but why??
-        ## maybe- need to pass in same 'stdscr' to anything with windowing?
-        if   ikey == curses.KEY_LEFT:   self.dec_field_ix
-        elif ikey == curses.KEY_RIGHT:  self.inc_field_ix
-        elif ikey == curses.KEY_UP:     self.IncCursor
-        elif ikey == curses.KEY_DOWN:   self.DecCursor
-        else:
-            return
-
-        return True
 
 
     ############################################################################
@@ -577,22 +598,51 @@ class slotHolder(portHolder):
                 if self.port_f:
                     self.port_f.send(msg_i.copy())
 
+                self.msgCheck_NN(msg_i)
+
+
         if self.port_c:
             msg_c = self.port_c.poll()
             if msg_c:
-                self.msgCheck(msg_c)
+                self.last_msg_c = msg
+                self.msgCheck_CC(msg_c)
 
 
-    def msgCheck(self, msg):
+    def msgCheck_CC(self, msg):
         if msg.type == 'control_change':
             if msg.control in [96, 97]:
                 _funcs = self.msgDict.get(msg.value, None)
                 if _funcs:
                     _func = _funcs[1] if (msg.control == 97) else _funcs[0]
                     self.last_func = _func.__name__
-                    self.last_msg_c = msg
                     _func()
                     return True
+
+    def msgCheck_NN(self, msg):
+        if msg.type in ['note_on', 'note_off']:
+            if msg.channel in [self.MIDI_CH_CTL, self.MIDI_CH_MOD]:
+                _ix     = msg.note % len(self.slots)
+                _mod    = msg.channel == self.MIDI_CH_MOD
+                _stop   = msg.type == 'note_off'
+
+                _func = self.slots[_ix].doPlay2_out
+                self.last_func = _func.__name__
+
+                _func(mod=_mod, stop=_stop)
+
+                self.Log(" | ".join([str(x) for x in [
+                    self.slots[_ix].slotname,
+                    msg.note,
+                    msg.channel,
+                    msg.velocity,
+                    ]]))
+
+                return True
+
+
+
+                
+
 
 
 ############################################################################

@@ -72,9 +72,9 @@ class InfileGetter():
         self.last_cmd       = None
 
         self.recopy     = int(os.environ.get('RECOPY', 1))
-        self.reconvert  = int(os.environ.get('RECONVER', 1))
+        self.reconvert  = int(os.environ.get('RECONVERT', 1))
 
-        self.copy_mode      = self.MODES.FILE
+        self.copy_mode      = self.MODES.YTDL
 
 
     def __str__(self):
@@ -136,12 +136,15 @@ class InfileGetter():
             _poll = self.proc.poll()
             if _poll == None:   ## still running
                 pass
+                #self.pr_poll()
             elif _poll == 0:    ## good result
+                self.Log("proc rc=0")
                 self.proc_start = None
                 self.state = self.STATES.CONVERT
                 self.Convert()
             else:
                 self.errors.append(f"FAIL, proc poll={_poll}")
+                self.Log(f"FAIL, proc poll={_poll}")
                 self.state = self.STATES.ERROR
 
         elif self.state == self.STATES.CONVERT:
@@ -149,6 +152,7 @@ class InfileGetter():
             if _poll == None:
                 pass
             elif _poll == 0: 
+                self.Log("proc rc=0")
                 self.proc_start = None
                 self.proc = None
                 self.state = self.STATES.READY
@@ -156,6 +160,7 @@ class InfileGetter():
                 #self.InfoWin and self.InfoWin.clear()  ## dont do draw stuff outside 'Draw'!
             else:
                 self.errors.append(f"FAIL, proc poll={_poll}")
+                self.Log(f"FAIL, proc poll={_poll}")
                 self.state = self.STATES.ERROR
 
         elif self.state == self.STATES.READY:
@@ -216,11 +221,35 @@ class InfileGetter():
                 )
             
             self.proc_start = time.time()
+            self.Log(f"CMD: # {cmd}")
             DEBUG and print(f"\033[33m## {cmd}\033[0m", file=sys.stderr)
+
+
+    ## this seems to 'block', oh well do we or do we not want to see the output?
+    ## (in a screen view panel thing?  Not.)
+    def pr_poll(self):
+        if not self.proc:
+            return 
+        
+
+        p = self.proc
+        _recent_output = False
+        for line in list(iter(p.stdout.readline, "")):
+            if line == b'':
+                continue
+            print(f"\033[36;1m{line}\033[0m", end="")
+            _recent_output = True
+
+        for line in iter(p.stderr.readline, ""):
+            if line == b'':
+                continue
+            print(f"\033[33;2m{line}\033[0m", end="")
+            _recent_output = True
+
 
     #######################################################################
 
-    @logDecor
+    #@logDecor
     def _WebCopy(self, mode=CopyModes.SCP, recopy=False):
         def _print(txt, err=0):
             self.Log(f"Copy | {txt}")
@@ -231,6 +260,9 @@ class InfileGetter():
         _recopy = self.recopy
         _print(f"mode={str(mode)}, recopy={_recopy}")
 
+        _YTDL = "youtube-dl"
+        _YTDL = "/tmp/yt-dlp/yt-dlp.sh"
+
         if self.uri:
             _filename           = hashlib.md5(self.uri.encode()).hexdigest() + '.wav'
             self.copy_target    = os.path.join(self.CONVERT_DIR, "_" + _filename)
@@ -240,7 +272,8 @@ class InfileGetter():
             _cmd = {
                 self.MODES.SCP  : f"scp {self.uri} {_dest}",
                 self.MODES.FILE : f"cp {self.uri} {_dest}",
-                self.MODES.YTDL : f"youtube-dl {self.uri} -x --audio-format wav -o {_dest}",
+                #self.MODES.YTDL : f"youtube-dl {self.uri} -x --audio-format wav -o {_dest}",
+                self.MODES.YTDL : f"{_YTDL} {self.uri} -x --audio-format wav -o {_dest}",
                 self.MODES.HTTP : f"wget -O {_dest} {self.uri}",
                 }.get(mode, None)
 
@@ -248,7 +281,7 @@ class InfileGetter():
                 _print(f"FROM: {self.uri}")
                 _print(f"TO:   {self.copy_target} (isfile={os.path.isfile(self.copy_target)})")
                 if not _recopy and os.path.isfile(self.copy_target):
-                    _cmd = "sleep 0.2"
+                    _cmd = "sleep 0.01"
 
                 self.proc = _cmd
                 self.state = self.STATES.COPY
@@ -283,7 +316,7 @@ class InfileGetter():
             _print(f"reconvert={_reconvert}")
             _print(f"FROM: {self.copy_target}")
             _print(f"TO:   {self.convert_target} (isfile={os.path.isfile(self.convert_target)})")
-            _cmd = "sleep 0.2"      ## cmd for proc that does nothing!
+            _cmd = "sleep 0.01"      ## cmd for proc that does nothing!
             if _reconvert or not os.path.isfile(self.convert_target):
                 _cmd = INFILE_CONVERT_CMD_FMT.format(self.copy_target, self.convert_target)
 
@@ -392,7 +425,7 @@ class InfileGetter():
         args = self.parse_argv(sys.argv)
         
         if   args.file:         self.uri = args.file;   self.Copy_FILE()
-        elif args.ytdl:         self.url = args.ytdl;   self.Copy_YTDL()
+        elif args.ytdl:         self.uri = args.ytdl;   self.Copy_YTDL()
         elif args.scp:          self.uri = args.scp;    self.Copy_SCP()
         elif args.wget:         self.uri = args.wget;   self.Copy_HTTP()
         else:   
