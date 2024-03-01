@@ -3,13 +3,18 @@
 import os
 import sys
 assert(sys.version_info.major == 3)
+import argparse
 import datetime	## timedelta stuff with ffmpeg
 import pygame
 import shlex, subprocess
+import time
 import yaml
 
+
+from .slicer_pitches import PitchesSlicer
+
 ## ought to just have our own EXECUTE_CMD maybe?  phase the 'utils' file out?
-from .utils import PYG_SOUND_LOAD, EXECUTE_CMD
+from .utils import PYG_SOUND_LOAD, EXECUTE_CMD, NORMALIZE
 from .defaults import (
         DEFAULT_WAV_IN_DIR, DEFAULT_WAV_OUT_DIR, 
         OK_FILE_TYPES, pr_debug,
@@ -307,7 +312,8 @@ class wcSlot():
 
     @property
     def cmd_docut_mod(self):
-        assert(os.path.isfile(self.outfile))
+        print(self.outfile)
+        #assert(os.path.isfile(self.outfile))
         if os.path.isfile(self.outfile):
             return "ffmpeg -y -i {} -af atempo={:.2f} {}".format(
                 self.outfile,
@@ -441,7 +447,62 @@ class wcSlot():
                 if _val != None:    self.retrigger = _val
                 #self.Log(f"{self.slotname}.CFGLOAD") ## print once in the caller 'slots loaded'
    
+    ############################################################################
+    ############################################################################
+
+    def parse_argv(self, argv):
+        print(f"parse_argv: START from {argv[0]}")
+        parser = argparse.ArgumentParser(description="cmd line options for standalone wcSlot demo")
+        parser.add_argument('-0', '--pos0', dest='pos0', type=str, help='pos0')
+        parser.add_argument('-1', '--pos1', dest='pos1', type=str, help='pos1')
+        parser.add_argument('-b', '--bpm', dest='bpm', type=str, help='bpm')
+        parser.add_argument('-s', '--shift', dest='shift', type=str, help='shift')
+        parser.add_argument('-i', '--infile', dest='infile', type=str, help='infile, to segment')
+
+        return parser.parse_args(argv[1:])
 
 
+    def as_cli(self):
+        def _print(txt):
+            print(f"\033[33m{txt}\033[0m", file=sys.stderr)
 
+        args = self.parse_argv(sys.argv)
+        self.slotnum = 99
+
+        if args.pos0:   self.pos0 = float(args.pos0)
+        if args.pos1:   self.pos1 = float(args.pos1)
+        if args.infile: self.infile = args.infile
+        _print(f"{self}")
+        if not args.infile:
+            _print("no infile")
+            return
+
+        _print("DOCUT out")
+        _print(f"in:  {self.infile}")
+        _print(f"out: {self.outfile}")
+        self.doCut3_out(mod=False)
+
+        if args.bpm:    self.bpm = float(args.bpm)
+        if args.shift:  self.shift_tempo = float(args.shift)
+        if args.bpm or args.shift:
+            _print(f"{self}")
+
+            _print("DOCUT mod")
+            _print(f"in:  {self.infile}")
+            _print(f"out: {self.modfile}")
+            self.doCut3_out(mod=True)
+
+        norm_file = "/tmp/wav_out/NORM_OUT.wav"
+        _print("NORMALIZE:")
+        _print(f"in:  {self.outfile}")
+        _print(f"out: {norm_file}")
+        ## need to put this after the Cutter automatically
+        NORMALIZE(self.outfile, norm_file)
+        
+        if args.bpm or args.shift:
+            norm_file = "/tmp/wav_out/NORM_MOD.wav"
+            _print("NORMALIZE:")
+            _print(f"in:  {self.modfile}")
+            _print(f"out: {norm_file}")
+            NORMALIZE(self.modfile, norm_file)
 

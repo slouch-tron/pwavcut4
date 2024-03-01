@@ -11,13 +11,20 @@ from tools import Slicer, PitchesSlicer
 from tools import CURSE_INIT
 from tools import NotesWin
 
-fff = os.environ.get('INFILE', "/tmp/wav_out/slot00/OUT.wav")
+fff = os.environ.get('INFILE', "/tmp/wav_out/slot03/OUT.wav")
 
 CURSE = int(os.environ.get('CURSE', 0))
 
-def main_test():
-    sss = PitchesSlicer()
-    sss.parse_argv(sys.argv)
+def main_test(stdscr):
+    if not CURSE:
+        curses.initscr()
+        curses.endwin()
+
+    CURSE_INIT(stdscr)
+
+    sss = PitchesSlicer(stdscr)
+    aaa = sss.parse_argv(sys.argv)
+    print(aaa)
     sss.infile = fff
     print(sss)
     #sss.Slice()
@@ -38,5 +45,5 @@ def main_test():
 
 if __name__ == '__main__':
     pygame.mixer.init()
-    main_test()
-
+    curses.wrapper(main_test)
+    curses.endwin()

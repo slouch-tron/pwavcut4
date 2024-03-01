@@ -251,8 +251,9 @@ def DRAWHELPWIN(obj, dict_name='keyDict'):
         return 
 
     for k, v in _kDict.items():
+        _k = str(k) 
         _v = v[0] if isinstance(v, list) else v
-        _ostr = f"'{str(k):2s}' | {_v.__doc__ or _v.__name__}"
+        _ostr = f"'{_k:2s}' | {_v.__doc__ or _v.__name__}"
         _win.addstr(_yy, 0, _ostr, _attr)
         _yy += 1
 

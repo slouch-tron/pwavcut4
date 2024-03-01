@@ -1,7 +1,9 @@
 import os
 import curses
 
+
 class DrawSlotsClass():
+
     def DrawSlots(self, **kwa):
         _col0 = kwa.get('col0', None) or curses.color_pair(24)      ## unselected, regular
         _col1 = kwa.get('col1', None) or curses.color_pair(51)      ## highlighted field
@@ -88,4 +90,51 @@ class DrawSlotsClass():
                 #    curses.endwin()
                 #    print(cc)
 
+
+    def DrawLogWin(self, **kwa):
+        _attr = kwa.get('col0', None) or curses.color_pair(20)
+
+        _ymax, _ = self.logWin.getmaxyx() 
+        while len(self.log_lines) > (_ymax - 6):
+            self.log_lines.pop(0)
+
+        self.logWin.addstr(0, 0, f"#### LOG   ######## {self.COORDS_LOG} ####", _attr)
+        for ix, f in enumerate(self.log_lines):
+            self.logWin.addstr(ix+1, 0, f, _attr)
+
+
+    def DrawInfoWin(self, **kwa):
+        _ym, _xm = self.infoWin.getmaxyx() 
+        _attr = kwa.get('col0', curses.color_pair(36))
+
+        _slot = self.selectedSlot
+
+        _ratio = _slot.shift_tempo / _slot.bpm
+        _infile = os.path.split(_slot.infile)[-1] if _slot.infile else 'None'
+        _lines = [
+            f"#### {_slot.slotname.upper()} ######## {self.COORDS_INFO} ####",
+            f"pos0:         {_slot.pos0:6.2f}",
+            f"pos1:         {_slot.pos1:6.2f}",
+            f"infile:       {_infile}",
+            f"p_delta:      {_slot.pos1 - _slot.pos0}",
+            f"duration:     {_slot.duration}",
+            f"bpm/shift:    {_slot.bpm:6.2f} / {_slot.shift_tempo:6.2f} / {_ratio:6.4f}",
+            f"lock_length:  {_slot.lock_length} ({_slot.lock_length_switch})",
+            f"retrigger:    {_slot.retrigger}",
+            f"outfile:      {os.path.isfile(_slot.outfile)}",
+            f"modfile:      {os.path.isfile(_slot.modfile)}",
+            f"pitchObj:     {_slot.pitchObj != None}",
+            f"ctrl_ch:      {_slot.ctrl_ch:02x}",
+            ]
+
+        _yy = ix = 0
+        for ix, line in enumerate(_lines):
+            _line = f"{ix:02d} | {line}"
+            _line += '_'*(_xm - 1 - len(_line))
+            self.infoWin.addstr(ix+_yy, 0, _line, _attr)
+
+        _yy = ix
+
+
+	
 

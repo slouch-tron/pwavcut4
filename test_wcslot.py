@@ -40,8 +40,6 @@ def main_test2(stdscr):
 if __name__ == '__main__':
     pygame.mixer.init()
     #main_test()
-
     curses.wrapper(main_test2)
-
     curses.endwin()
 

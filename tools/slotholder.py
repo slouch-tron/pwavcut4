@@ -10,10 +10,12 @@ import pygame
 from .wcslot import wcSlot
 from .portholder import portHolder
 from .infile_getter import InfileGetter
+from .slicer_pitches import PitchesSlicer
 from .defaults import (
         DEFAULT_MIDI_LISTEN_CH_OUT, DEFAULT_MIDI_LISTEN_CH_MOD, DEFAULT_MIDI_LISTEN_CH_KIT, 
         CURSE_INIT, 
         )
+
 
 from .utils import EW_PROMPT, DRAWHELPWIN
 from .draw_slots_class import DrawSlotsClass
@@ -31,11 +33,14 @@ class slotHolder(portHolder):
     MIDI_CH_KIT = DEFAULT_MIDI_LISTEN_CH_KIT
 
     def __init__(self, stdscr, **kwa):
-        self.slot_count = kwa.get('slot_count', 8)
+        self.slot_count     = kwa.get('slot_count', 8)
+        self.slicer_count   = kwa.get('slicer_count', 4)
 
         self.slots = []
         for s in range(self.slot_count):
             self.slots.append(wcSlot(slotnum=s, ctrl_ch=s, Log=self.Log))
+
+        self.slicers = []
 
         ## 240229 - curse.wrapper(main), initscr, then make SlotHolder and Run
         ##  otherwise arrow keys might not work
@@ -338,140 +343,8 @@ class slotHolder(portHolder):
     ## incredible this works.  probably terrible practice?
     ## one bad thing from the prev. over-complicated project was, too many files for 1 'draw'
     def DrawSlots(self, **kwa):     DrawSlotsClass.DrawSlots(self, **kwa)
-
-    '''
-    def DrawSlots222(self, **kwa):
-        _col0 = kwa.get('col0', None) or curses.color_pair(24)      ## unselected, regular
-        _col1 = kwa.get('col1', None) or curses.color_pair(51)      ## highlighted field
-        _col2 = kwa.get('col2', None) or curses.color_pair(118)     ## toggled
-
-        #_ym, _xm = self.mainWin.getmaxyx()
-        _header2 = "_|_".join([
-            'SS', 
-            'POS0    ',
-            'POS1    ',
-            'INFILE              ',
-            'CH',
-            'LEN      ',
-            'LLOCK',
-            'OUT',
-            'MOD',
-            "OBJ",
-            "",
-
-            ])
-
-        self.mainWin.addstr(0, 0, _header2)
-
-        _yy = 1
-        _ll = 'LLOCK'
-        for ix, f in enumerate(self.slots):
-            _infile = 'None'
-            if f.infile:
-                _infile = os.path.splitext(os.path.split(f.infile)[-1:][0])[0]
-
-            _pos0   = f"{f.pos0:8.2f}"
-            _pos1   = f"{f.pos1:8.2f}"
-            _ch     = f"{f.ctrl_ch:2x}"
-            _ff     = f"{_infile[:10]:^20s}"
-            _dd     = f"{f.duration:9.4f}"
-            _bb     = f"{f.bpm:6.2f}"
-            _ss     = f"{f.shift_tempo:6.2f}"
-            _po     = f.pitchObj.state if f.pitchObj else 'None'
-
-            _attr = _col0
-            if ix == self.selected_ix:
-                _attr |= curses.A_REVERSE
-
-            _xx = 0
-            _ostr = f"{ix:02d}"
-            self.mainWin.addstr(_yy+ix, 0, _ostr, _attr);   _xx += len(_ostr)
-            self.mainWin.addstr(_yy+ix, _xx, " | ", _attr); _xx += len(" | ")
-
-            for ig, g in enumerate([_pos0, _pos1, _ff, _ch]): ## _ff
-                _tmpattr = _attr
-                if self.field_ix == ig and ix == self.selected_ix:
-                    _tmpattr = _col1 | curses.A_REVERSE
-
-                self.mainWin.addstr(_yy+ix, _xx, g, _tmpattr);  _xx += len(g)
-                self.mainWin.addstr(_yy+ix, _xx, " | ", _attr); _xx += len(" | ")
-
-            #for ih, h in enumerate([_dd, _bb, _ss]):
-            for ih, h in enumerate([_dd, ]):
-                self.mainWin.addstr(_yy+ix, _xx, h, _attr);     _xx += len(h)
-                self.mainWin.addstr(_yy+ix, _xx, " | ", _attr); _xx += len(" | ")
-
-            _attr3 = _attr
-            #_attr3 = _col2
-            if f.lock_length_switch:
-                if ix == self.selected_ix:
-                    _attr3 = _col1
-                _attr3 |= curses.A_REVERSE
-
-            self.mainWin.addstr(_yy+ix, _xx, _ll, _attr3);  _xx += len(_ll)
-            self.mainWin.addstr(_yy+ix, _xx, ' | ', _attr); _xx += len(" | ")
-
-            for _fix, _file in enumerate([f.outfile, f.modfile, _po]):
-                _attr2 = _attr
-                _ostr = '   '
-                if os.path.isfile(_file):
-                    _attr2 = _col2
-                    _ostr = 'OUT' if _fix == 0 else 'MOD'
-
-                #try:
-                if True:
-                    self.mainWin.addstr(_yy+ix, _xx, _ostr, _attr2);    _xx += len(_ostr)
-                    self.mainWin.addstr(_yy+ix, _xx, " | ", _attr);     _xx += len(' | ')
-                #except curses.error as cc:
-                #    curses.endwin()
-                #    print(cc)
-    '''
-
-    def DrawLogWin(self, **kwa):
-        _attr = kwa.get('col0', None) or curses.color_pair(20)
-
-        _ymax, _ = self.logWin.getmaxyx() 
-        while len(self.log_lines) > (_ymax - 6):
-            self.log_lines.pop(0)
-
-        self.logWin.addstr(0, 0, f"#### LOG   ######## {self.COORDS_LOG} ####", _attr)
-        for ix, f in enumerate(self.log_lines):
-            self.logWin.addstr(ix+1, 0, f, _attr)
-
-
-    def DrawInfoWin(self, **kwa):
-        _ym, _xm = self.infoWin.getmaxyx() 
-        _attr = kwa.get('col0', curses.color_pair(36))
-
-        _slot = self.selectedSlot
-
-        _ratio = _slot.shift_tempo / _slot.bpm
-        _infile = os.path.split(_slot.infile)[-1] if _slot.infile else 'None'
-        _lines = [
-            f"#### {_slot.slotname.upper()} ######## {self.COORDS_INFO} ####",
-            f"pos0:         {_slot.pos0:6.2f}",
-            f"pos1:         {_slot.pos1:6.2f}",
-            f"infile:       {_infile}",
-            f"p_delta:      {_slot.pos1 - _slot.pos0}",
-            f"duration:     {_slot.duration}",
-            f"bpm/shift:    {_slot.bpm:6.2f} / {_slot.shift_tempo:6.2f} / {_ratio:6.4f}",
-            f"lock_length:  {_slot.lock_length} ({_slot.lock_length_switch})",
-            f"retrigger:    {_slot.retrigger}",
-            f"outfile:      {os.path.isfile(_slot.outfile)}",
-            f"modfile:      {os.path.isfile(_slot.modfile)}",
-            f"pitchObj:     {_slot.pitchObj != None}",
-            f"ctrl_ch:      {_slot.ctrl_ch:02x}",
-            ]
-
-        _yy = ix = 0
-        for ix, line in enumerate(_lines):
-            _line = f"{ix:02d} | {line}"
-            _line += '_'*(_xm - 1 - len(_line))
-            self.infoWin.addstr(ix+_yy, 0, _line, _attr)
-
-        _yy = ix
-
-
+    def DrawLogWin(self, **kwa):    DrawSlotsClass.DrawLogWin(self, **kwa)
+    def DrawInfoWin(self, **kwa):   DrawSlotsClass.DrawInfoWin(self, **kwa)
     def DrawHelpWin(self):
         DRAWHELPWIN(self, 'keyDict')
         #DRAWHELPWIN(self, 'msgDict')
@@ -541,8 +414,8 @@ class slotHolder(portHolder):
 
         return self._keyDict
 
-
-    def keyCheck(self, ikey):
+    @property
+    def arrowKeyDict(self):
         if not hasattr(self, '_arrowKeyDict'):
             self._arrowKeyDict = {
                 curses.KEY_LEFT     : self.dec_field_ix,
@@ -552,28 +425,21 @@ class slotHolder(portHolder):
                 curses.KEY_BACKSPACE : self.StopAll,
                 }
 
-        _func = self._arrowKeyDict.get(ikey, None)
+        return self.arrowKeyDict
+
+
+    def keyCheck(self, ikey):
+        _func = self.arrowKeyDict.get(ikey, None)
         if _func:
             self.last_func = _func.__name__
             _func()
             return True
-            
-
-        ## doesnt work but why??
-        ## maybe- need to pass in same 'stdscr' to anything with windowing?
-        ## 240229 - works when we 'initscr' more outside the class
-        #if   ikey == curses.KEY_LEFT:   self.dec_field_ix()
-        #elif ikey == curses.KEY_RIGHT:  self.inc_field_ix()
-        #elif ikey == curses.KEY_UP:     self.IncCursor()
-        #elif ikey == curses.KEY_DOWN:   self.DecCursor()
 
         _func = self.keyDict.get(chr(ikey), None)
-
         if _func:
             self.last_func = _func.__name__
             _func()
             return True
-
 
 
     ############################################################################
@@ -600,7 +466,6 @@ class slotHolder(portHolder):
 
                 self.msgCheck_NN(msg_i)
 
-
         if self.port_c:
             msg_c = self.port_c.poll()
             if msg_c:
@@ -617,6 +482,7 @@ class slotHolder(portHolder):
                     self.last_func = _func.__name__
                     _func()
                     return True
+
 
     def msgCheck_NN(self, msg):
         if msg.type in ['note_on', 'note_off']:
@@ -638,11 +504,6 @@ class slotHolder(portHolder):
                     ]]))
 
                 return True
-
-
-
-                
-
 
 
 ############################################################################

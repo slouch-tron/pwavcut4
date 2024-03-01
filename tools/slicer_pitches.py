@@ -20,7 +20,6 @@ class PitchesSlicer(Slicer):
         self.basenote_ix = 69   # 'A4'
         self.multitrig  = True
         self.mono       = True
-        self.proc       = None
 
         self.note_range = range(69 - 36, 69 + 36)
 
@@ -44,7 +43,7 @@ class PitchesSlicer(Slicer):
 
     def Slice(self, **kwa):
         if not self.infile:
-            return
+            return False
 
         #self.Log(f"{self.devname}.Slice: START, {kwa}")
         _only_reload = kwa.get('reload', False)
@@ -80,6 +79,10 @@ class PitchesSlicer(Slicer):
                     outfile=_outfile,
                     basenote_ix=self.basenote_ix,
                     ))
+
+                self.Log(f"Slice: Start {_name}")
+
+        return True
 
 
 

@@ -11,7 +11,7 @@ from enum import Enum, auto
 
 import pygame
 
-from .wcslot import wcSlot
+#from .wcslot import wcSlot
 from .portholder import portHolder
 from .defaults import (
         DEFAULT_MIDI_LISTEN_CH, DEFAULT_MIDI_LISTEN_CH_MOD, DEFAULT_MIDI_LISTEN_CH_KIT, 
@@ -20,7 +20,7 @@ from .defaults import (
         pr_debug,
         )
 
-from .utils import EW_PROMPT
+from .utils import EW_PROMPT, DRAWHELPWIN
 from .notes import NOTE_DICT
 
 DEFAULT_CTRL_CH = 1
@@ -60,6 +60,8 @@ class Slicer(portHolder):
 
         self.infile     = kwa.get('infile', None)
         self.Log        = kwa.get('Log', None) or print
+        #self.stdscr     = stdscr
+        ## this class may need to just slice, without stdscr
         self.stdscr     = kwa.get('stdscr', None) or curses.wrapper(CURSE_INIT)
         self.basedir    = kwa.get('basedir', None) or DEFAULT_SRC_OUT_DIR
         self.bpm        = kwa.get('bpm', 92.0)
@@ -82,6 +84,7 @@ class Slicer(portHolder):
         self.last_func  = None
 
         self.CmdQueue   = list()
+        self.last_cmd   = None
 
         if not pygame.get_init():
             pygame.mixer.init()
@@ -102,6 +105,7 @@ class Slicer(portHolder):
             self.last_func,
             repr(self.state),
             #self.sliced,
+            str(len(self.CmdQueue)),
             ]])
 
 
@@ -154,18 +158,23 @@ class Slicer(portHolder):
                 return  
             elif _poll == 0:    ## good result
                 self.proc = None
+                self.Log(f"CmdQueueUpdate OK: {self.last_cmd}")
             else:
+                self.Log(f"CmdQueueUpdate ERR: {self.last_cmd}")
                 pass            ## error state?
                 self.proc = None
 
         if not self.proc:
             if len(self.CmdQueue) > 0:
+                cmd = self.CmdQueue.pop(0)
                 self.proc = subprocess.Popen(
-                    shlex.split(self.CmdQueue.pop(0)),
+                    shlex.split(cmd),
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     )
 
+                self.Log(f"CmdQueueUpdate START: {cmd}")
+                self.last_cmd = cmd
                 if len(self.CmdQueue) == 0:
                     self.Reload()
 
@@ -291,6 +300,7 @@ class Slicer(portHolder):
                 'z' : self.CmdQueueCancel,
                 '1' : self.stdscr.clear,
                 'Q' : self.Quit,
+                'H' : self.DrawHelpWin,
                 #27 : self.Quit,
                 }
 
@@ -331,6 +341,9 @@ class Slicer(portHolder):
 
     def Quit(self):
         raise KeyboardInterrupt
+
+    def DrawHelpWin(self):
+        DRAWHELPWIN(self, 'keyDict')
 
     ## PLAY / SLICE
     ############################################################################
@@ -406,7 +419,7 @@ class Slicer(portHolder):
             curses.endwin()
             print(ee)
 
-        not terminal and curses.endwin()
+        #not terminal and curses.endwin()
 
 
 ########################################################################################
