@@ -24,7 +24,7 @@ from .draw_slots_class import DrawSlotsClass
 class slotHolder(portHolder):
     EDITFIELDS  = ['pos0', 'pos1', 'infile']
     RESOLUTIONS = [1.0, 0.1, 0.01]
-    COORDS_MAIN = (20, 100, 2, 1)
+    COORDS_MAIN = (20, 100, 3, 1)
     COORDS_INFO = (20, 48, 22, 1)
     COORDS_LOG  = (19, 100, 40, 1)
 
@@ -316,6 +316,7 @@ class slotHolder(portHolder):
                 self.msgPoll()
                 self.Draw()
                 self.cyc_ct += 1
+                self.hz_update()
 
         except KeyboardInterrupt:
             curses.endwin()
@@ -325,7 +326,7 @@ class slotHolder(portHolder):
     def Draw(self):
         self.stdscr.addstr(0, 0, str(self))
         #self.stdscr.addstr(1, 0, str(list(self.keyDict.keys())))
-        self.stdscr.addstr(1, 0, str(self.port_i))
+        self.stdscr.addstr(1, 0, f"Draw per sec: {self.hz:9.2f}")
 
         self.DrawSlots()
         self.DrawLogWin()
@@ -333,6 +334,11 @@ class slotHolder(portHolder):
         if self.Importer:
             self.Importer.Draw()
             self.Importer.InfoWin.refresh()
+
+        if self.selectedSlot.PitchObj:
+            self.selectedSlot.PitchObj.Draw()
+            ## needs an Update function for non-draw updates, like running process
+            self.selectedSlot.PitchObj.CmdQueueUpdate()
 
         self.stdscr.refresh()
         self.mainWin.refresh()
@@ -410,6 +416,7 @@ class slotHolder(portHolder):
         self._keyDict.update({
             'r' : self.selectedSlot.toggle_retrigger,
             'l' : self.selectedSlot.lock_length_toggle,
+            'P' : self.selectedSlot.SetupPitchObj,
             })
 
         return self._keyDict
@@ -425,7 +432,7 @@ class slotHolder(portHolder):
                 curses.KEY_BACKSPACE : self.StopAll,
                 }
 
-        return self.arrowKeyDict
+        return self._arrowKeyDict
 
 
     def keyCheck(self, ikey):
@@ -505,7 +512,35 @@ class slotHolder(portHolder):
 
                 return True
 
+            elif msg.channel < len(self.slots):
+                _slot = self.slots[msg.channel]
+                if _slot.PitchObj:
+                    _slot.PitchObj.msgCheck(msg)
+
 
 ############################################################################
 ############################################################################
+
+    @property
+    def hz(self):
+        if not hasattr(self, '_hz_list'):
+            self._hz_list = []
+
+        if not hasattr(self, '_hz_last'):
+            self._hz_last = time.time()
+
+        if len(self._hz_list) > 1000:
+            while len(self._hz_list) > 1000:
+                self._hz_list.pop(0)
+
+            return 1000 / sum(self._hz_list) 
+
+        return 0
+
+    def hz_update(self):
+        self.hz
+        _time = time.time()
+        self._hz_list.append(_time - self._hz_last)
+        self._hz_last = _time
+
 

@@ -46,7 +46,7 @@ class States(Enum):
 class Slicer(portHolder):
     ID = 0
     COORDS_MAIN = (20, 80, 2, 1)
-    COORDS_INFO = (20, 80, 2, 1)
+    COORDS_INFO = (8, 80, 16, 0)
 
     STATES = States
 
@@ -66,7 +66,7 @@ class Slicer(portHolder):
         self.basedir    = kwa.get('basedir', None) or DEFAULT_SRC_OUT_DIR
         self.bpm        = kwa.get('bpm', 92.0)
         self.shift_tempo = kwa.get('shift_tempo', 92.0)
-        #self.ctrl_ch    = kwa.get('ctrl_ch', DEFAULT_CTRL_CH)
+        self.ctrl_ch    = kwa.get('ctrl_ch', DEFAULT_CTRL_CH)
         self.multitrig  = False
         self.mono       = False
 
@@ -253,7 +253,7 @@ class Slicer(portHolder):
             self.infoWin.refresh()
         else:
             self.infoWin = None
-        #self.stdscr.refresh()
+
 
     def TermDraw(self):
         print(self)
@@ -263,6 +263,8 @@ class Slicer(portHolder):
     def MsgDict(self):
         if not hasattr(self, '_MsgDict'):
             self._MsgDict = {
+                    20 : [self.multitrig_toggle]*2,
+                    21 : [self.mono_toggle]*2,
                 }
 
         return self._MsgDict
@@ -271,17 +273,21 @@ class Slicer(portHolder):
         if not msg:
             return
 
-        if msg.type in ['note_on', 'note_off']:
-            if msg.channel == self.ctrl_ch:
-                self.lastRecd = msg
-                return True     ## 'true' == 'for the caller to do something w/ the msg'
-
         if msg.type == 'control_change':
             if msg.control in [96, 97]:
-                if   msg.value == 20:    self.multitrig = (self.control == 97)
-                elif msg.value == 21:    self.mono = (self.control == 97)
+                _funcs = self.MsgDict.get(msg.value, None)
+                if _funcs:
+                    _func = _funcs[1 if msg.control == 97 else 0]
+                    self.last_func = _func.__name__
+                    _func()
+                    return True
+
             elif msg.control == 7:
                 pass ## volume ctrl
+            else:
+                return
+
+            return True
 
 
     @property

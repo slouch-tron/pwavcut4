@@ -69,7 +69,6 @@ class wcSlot():
         self.recfile = os.path.join(self.out_path, "REC.wav")
         self.monfile = os.path.join(self.out_path, "MON.wav")
 
-        self.pitchObj = None
 
         #self.Log(f"{self.slotname} initialized!")
 
@@ -447,6 +446,48 @@ class wcSlot():
                 if _val != None:    self.retrigger = _val
                 #self.Log(f"{self.slotname}.CFGLOAD") ## print once in the caller 'slots loaded'
    
+    ############################################################################
+    ############################################################################
+
+    @property
+    def PitchObj(self):
+        if not hasattr(self, '_PitchObj'):
+            self._PitchObj = None
+
+        return self._PitchObj
+
+    @PitchObj.setter
+    def PitchObj(self, ptype):
+        _infile = self.outfile if (self.bpm == self.shift_tempo) else self.modfile
+        if os.path.isfile(_infile):
+            self._PitchObj = None
+
+
+            _Class = PitchesSlicer
+            self.Log(f"{_Class}")
+
+            self._PitchObj = _Class(
+                infile=_infile, 
+                bpm=self.bpm, 
+                shift_tempo=self.shift_tempo,
+                ctrl_ch=self.slotnum,
+                )
+
+            self.Log(f"{self._PitchObj}")
+
+
+    def SetupPitchObj(self):
+        if self.PitchObj:
+            self.PitchObj.Slice()
+        else:
+            self.PitchObj = PitchesSlicer
+
+
+
+                
+
+   
+
     ############################################################################
     ############################################################################
 

@@ -41,7 +41,7 @@ class DrawSlotsClass():
             _dd     = f"{f.duration:9.4f}"
             _bb     = f"{f.bpm:6.2f}"
             _ss     = f"{f.shift_tempo:6.2f}"
-            _po     = f.pitchObj.state if f.pitchObj else 'None'
+            #_po     = f.PitchObj.state if f.PitchObj else 'None'
 
             _attr = _col0
             if ix == self.selected_ix:
@@ -75,12 +75,17 @@ class DrawSlotsClass():
             self.mainWin.addstr(_yy+ix, _xx, _ll, _attr3);  _xx += len(_ll)
             self.mainWin.addstr(_yy+ix, _xx, ' | ', _attr); _xx += len(" | ")
 
-            for _fix, _file in enumerate([f.outfile, f.modfile, _po]):
+            for _fix, _file in enumerate([f.outfile, f.modfile, f.PitchObj]):
                 _attr2 = _attr
                 _ostr = '   '
-                if os.path.isfile(_file):
-                    _attr2 = _col2
-                    _ostr = 'OUT' if _fix == 0 else 'MOD'
+                if _fix == 2:
+                    if _file:
+                        _attr2 = _col2
+                        _ostr = 'OBJ'
+                else:
+                    if os.path.isfile(_file):
+                        _attr2 = _col2
+                        _ostr = 'OUT' if _fix == 0 else 'MOD'
 
                 #try:
                 if True:
@@ -89,6 +94,8 @@ class DrawSlotsClass():
                 #except curses.error as cc:
                 #    curses.endwin()
                 #    print(cc)
+
+
 
 
     def DrawLogWin(self, **kwa):
@@ -123,7 +130,7 @@ class DrawSlotsClass():
             f"retrigger:    {_slot.retrigger}",
             f"outfile:      {os.path.isfile(_slot.outfile)}",
             f"modfile:      {os.path.isfile(_slot.modfile)}",
-            f"pitchObj:     {_slot.pitchObj != None}",
+            f"PitchObj:     {_slot.PitchObj.devname if _slot.PitchObj else 'none'}",
             f"ctrl_ch:      {_slot.ctrl_ch:02x}",
             ]
 

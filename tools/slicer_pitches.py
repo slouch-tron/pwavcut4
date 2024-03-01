@@ -88,12 +88,17 @@ class PitchesSlicer(Slicer):
 
     def msgCheck(self, msg):
         
-        if super().msgCheck(msg):
+        #if super().msgCheck(msg):  ## checking channel happens in slotholder atm
+        if msg.type in ['note_on', 'note_off']:
+            self.lastRecd = msg
             if msg.note in self.note_range:
                 _condition = msg.type == 'note_off' or msg.velocity == 0
                 self.pygPlay(msg.note, stop=_condition)
 
                 return True
+
+        else:
+            super().msgCheck(msg)
 
 
 
