@@ -275,7 +275,10 @@ class NotesWin():
             self.NNWin.addstr(row+1, 1, ostr, _attr0)
 
             for col in range(width):
-                note = (row * 8) + col
+                note = (row * 8) + col + self.note_offset
+                if note < 0 or note > self.MAX_NOTE:
+                    continue 
+
                 _row = row
                 _attr = curses.color_pair(self.COL1 if note in self.notes_on else self.COL0)
                 self.NNWin.addstr(_row+1, (col*5)+2, ofmt(note), _attr)
