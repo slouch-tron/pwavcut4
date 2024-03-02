@@ -14,7 +14,7 @@ class NotesWin():
    
     COORDS_NNW  = (20, 120, 22, 1)
     COORDS_CCW  = (20, 120, 2, 1)
-    MAX_NOTE    = 127
+    MAX_NOTE    = 130
 
     BLINK   = 100
     COL0    = 18       ## off
@@ -22,7 +22,7 @@ class NotesWin():
     COL_TITLE = 36
 
     MODES   = ['DEC', 'HEX', 'ANSI', 'BIN']
-    LAYOUTS = ['DRUM8', 'KEY12']
+    LAYOUTS = ['DRUM8', 'KEY12', 'COMPACT']
 
     OUT_FMTS = {
             0 : "{:<3d}".format,
@@ -221,6 +221,7 @@ class NotesWin():
         _func = {
             0 : self._draw_nnwin_drum8,
             1 : self._draw_nnwin_key12,
+            2 : self._draw_nnwin_compact,
             }.get(self.lo_ptr, None)
 
         if _func:
@@ -262,6 +263,25 @@ class NotesWin():
                         self.COL0 if _note not in self.notes_on else self.COL1 )
 
                 self.NNWin.addstr(_row+_yy, _column, _ofmt(_note), _attr)
+
+
+    def _draw_nnwin_compact(self, width=8):
+        ofmt = self.OUT_FMTS.get(self.mode_ptr)
+        _attr0 = curses.color_pair(24)
+        _yy = 2
+
+        for row in range(16):
+            ostr = "    |"*width
+            self.NNWin.addstr(row+1, 1, ostr, _attr0)
+
+            for col in range(width):
+                note = (row * 8) + col
+                _row = row
+                _attr = curses.color_pair(self.COL1 if note in self.notes_on else self.COL0)
+                self.NNWin.addstr(_row+1, (col*5)+2, ofmt(note), _attr)
+
+
+
 
 
     def Draw_CCWin(self):
