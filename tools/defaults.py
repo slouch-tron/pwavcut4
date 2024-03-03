@@ -20,7 +20,8 @@ LOG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../log'))
 DEFAULT_CFGFILE = os.path.join(CFG_PATH, "cfg.yml")
 
 OK_FILE_TYPES   = ['.wav', '.mp3', '.mp4', '.ogg']
-OK_ARCHS        = ['armv7l', 'x86_64']
+OK_ARCHS        = ['armv7l', 'x86_64', 'aarch64']   ## RPI4 uses 'aarch64', old one is 'armv7l'?
+
 
 ## import to other places for consistency
 DEBUG       = int(os.environ.get('DEBUG', 0))
