@@ -18,7 +18,7 @@ def main_test():
             print(iii)
             iii.Update()
             time.sleep(0.1)
-            if iii.state == iii.STATES.READY:
+            if iii.state in [iii.STATES.READY, iii.STATES.ERROR, iii.STATES.CANCEL]:
                 print(iii)
                 break
     except KeyboardInterrupt:

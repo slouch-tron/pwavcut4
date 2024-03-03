@@ -65,7 +65,7 @@ class InfileGetter():
     DEFAULT_CFG = dict(
         copy_mode_val=DEFAULT_MODE_IX, 
         recopy=True, reconvert=True, 
-        infile=None,
+        uri=None,
         )
 
 
@@ -79,7 +79,7 @@ class InfileGetter():
         self.uri            = kwa.get('uri', None)
         #self.stdscr         = kwa.get('stdscr', None)
 
-        #self.Log            = kwa.get('Log', self.Log)
+        self.Log            = kwa.get('Log')
         self.logger         = kwa.get('logger', GET_LOGGER(appname=self.__class__.__name__))
         self.errors         = []
         self.proc_start     = None
@@ -107,9 +107,9 @@ class InfileGetter():
     def __del__(self):
         self.proc = False
 
-    def Log(self, msg, level='debug'):
-        _func = getattr(self.logger, level, None) or self.logger.debug
-        _func(msg)
+    #def Log(self, msg, level='debug'):
+    #    _func = getattr(self.logger, level, None) or self.logger.debug
+    #    _func(msg)
 
 
     def logDecor(func, *aa, **kwa):
@@ -151,9 +151,9 @@ class InfileGetter():
 
 
     def Update(self):
-        if self.state in [self.STATES.ERROR, self.STATES.CANCEL]:
+        if self.state in [self.STATES.ERROR, self.STATES.CANCEL, self.STATES.INIT]:
             #self.proc = False
-            return self.state
+            return 
 
         if self.state in [self.STATES.COPY, self.STATES.CONVERT]:
             _poll = self.proc.poll()
@@ -163,11 +163,11 @@ class InfileGetter():
             if _poll != 0:
                 self.Log(f"{self.state.name.upper()} FAIL, proc poll={_poll}")
                 self.state = self.STATES.ERROR
-                return
+                #return
 
             self.Log(" ".join([
                 f"{self.state.name.upper()} proc poll={_poll}",
-                f"{self.proc_runtime:5.2f} sec elapsed",
+                "{:5.2f} sec elapsed".format(self.proc_runtime or 0),
                 ]))
 
             if _poll == 0:    ## good result
@@ -178,24 +178,6 @@ class InfileGetter():
                     self.state = self.STATES.READY
                 else:
                     raise TypeError
-
-
-        elif self.state == self.STATES.CONVERT:
-            _poll = self.proc.poll()
-            if _poll == None:
-                return
-
-            if _poll == 0: 
-                self.Log("CONVERT proc rc=0")
-                self.proc_start = None
-                self.proc = None
-                self.state = self.STATES.READY
-                #self.Log(f"{self.__class__.__name__}.state = {self.state.name}")
-                #self.InfoWin and self.InfoWin.clear()  ## dont do draw stuff outside 'Draw'!
-            else:
-                self.Log("CONVERT FAIL, proc poll={_poll}")
-                #self.errors.append(f"FAIL, proc poll={_poll}")
-                self.state = self.STATES.ERROR
 
         elif self.state == self.STATES.READY:
             if not os.path.isfile(self.convert_target):
@@ -245,7 +227,9 @@ class InfileGetter():
 
         #self.proc
         if self.proc:   
-            self.Log(f"proc.setter | end after {self.proc_runtime:5.2f} sec")
+            if self.proc_runtime:
+                self.Log(f"proc.setter | end after {self.proc_runtime:5.2f} sec")
+
             self._proc.terminate()
             self._proc = None
 
@@ -268,7 +252,7 @@ class InfileGetter():
 
     @property
     def proc_runtime(self):
-        if self.proc:
+        if self.state in [self.STATES.COPY, self.STATES.CONVERT]:
             return time.time() - self.proc_start
 
 
@@ -410,7 +394,7 @@ class InfileGetter():
         _attr = curses.color_pair(56)
 
         _ee = "elapsed:    "
-        _ee += "{:6.2f} sec".format(_time - self.proc_start) if self.proc_start else ""
+        _ee += f"{self.proc_runtime:6.2f} sec" if self.proc_runtime else "none          "
 
         _cc = 'None'
         _cv = 'None'
@@ -418,7 +402,7 @@ class InfileGetter():
         if self.convert_target: _cv = os.path.splitext(os.path.split(self.convert_target)[-1])[0]
 
         _attr2 = _attr
-        if self.proc:
+        if self.state in [self.STATES.CONVERT, self.STATES.COPY]:
         #if False:
             _bix  = int(_time * 100) % len(blink)
             _bcol = curses.color_pair(_bix)
@@ -430,7 +414,9 @@ class InfileGetter():
 
         self.InfoWin.addstr(0, 0, self.__class__.__name__, _attr)
         self.InfoWin.addstr(1, 0, "state:    ", _attr)
-        self.InfoWin.addstr(1, 10, self.state.name, _attr2)
+        #self.InfoWin.addstr(1, 0, "state:                ", _attr)
+        self.InfoWin.addstr(1, 10, self.state.name + "  ", _attr2)
+        self.InfoWin.addstr(1, 10, self.state.name + "  ", _attr2)
         _yy = 2
 
         _lines = [
@@ -439,7 +425,7 @@ class InfileGetter():
             f"reconv:   {self.reconvert == 1}",
             f"uri:      {str(self.uri)}",
             #f"copy:     {_cc}",
-            f"convert:  {_cv}",
+            f"convert:  {_cv[:10]}",
             f"dest_dir: {self.DEST_DIR}",
             _ee,
             f"errors:   {len(self.errors)}",
@@ -480,6 +466,8 @@ class InfileGetter():
         return True
 
 
+    #def Initiate(self):
+
     def prompt_for_filename(self):
         def _print(txt):
             self.Log(f"prompt_for_filename: {txt}")
@@ -487,17 +475,22 @@ class InfileGetter():
         if 'curses' in globals():
             curses.endwin()
 
-        if self.proc:
-            _print("terminate proc if running")
+        if self.state in [self.STATES.COPY, self.STATES.CONVERT]:
+            _print(f"terminate proc still running, poll={self.proc.poll()}")
             self.Cancel()
             return
 
-        _prompt = f"enter FILENAME or LINK to import using {self.copy_mode.name} method: "
-        _prompt += f"(prev '{self.uri}')" if self.uri else ""
+        if self.uri and not self.proc:
+            _print(f"try Copy:{self.copy_mode.name}")
+            self.Copy()
+            return
+
+        print(f"enter URI to import using {self.copy_mode.name} method")
+        print("ctrl-C to reset to INIT state")
+        print(f"Enter to use prev: '{self.uri}'")
 
         try:
-            _print(_prompt)
-            value = input(_prompt)
+            value = input((" "*20) + '> ')
             if value in ['\n', '']:
                 if self.uri:    ## previously used or unset?
                     print()
@@ -507,11 +500,11 @@ class InfileGetter():
             else:
                 if not value:
                     return
-                self.uri = str(value)
 
-            #self.Copy_FILE()
-            self.Log(f"try Copy:{self.copy_mode.name}")
-            self.Copy()
+                _value = str(value)
+                _print(f"URI = '{_value}'")
+                self.uri = _value
+                self.state = self.STATES.INIT
 
         except KeyboardInterrupt:
             self.state = self.STATES.INIT
@@ -545,6 +538,7 @@ class InfileGetter():
     def CfgSave(self):  CFGSAVE(self, self.devname)
     def CfgLoad(self):  CFGLOAD(self, self.devname)
 
+    '''
     @property
     def uri(self):
         if not hasattr(self, '_uri'):
@@ -554,7 +548,7 @@ class InfileGetter():
     @uri.setter
     def uri(self, val):
         self._uri = val
-
+    '''
 
     def CfgSave2(self):
         PREV = dict()

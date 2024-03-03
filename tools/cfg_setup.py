@@ -21,9 +21,11 @@ def CFGSAVE(self, cfgname, cfgdict=None):
 
         DATA.update({ cfgname : _data })
 
+    #print("SAVE")
+    #print(cfgname)
+    #print(_data)
+    #print(DATA)
     if _data:
-        print(_data)
-        print(DATA)
         with open(self.cfg_filename, 'w') as fp:
             yaml.dump(DATA, fp)
         
@@ -36,9 +38,11 @@ def CFGLOAD(self, cfgname):
 
         _data = DATA.get(cfgname, None)
 
+        #print("LOAD")
+        #print(cfgname)
+        #print(_data)
+        #print(DATA)
         if _data:
-            #print(_data)
-            #print(DATA)
             #for attr in self.DEFAULT_CFG.keys():
             for attr in _data.keys():
                 _val = _data.get(attr, None)
@@ -56,7 +60,7 @@ def _cfg_dict_trim(current, defaults):
             if k not in defaults or v == None:
                 continue 
 
-            print(k, v)
+            #print(k, v)
             _v = defaults.get(k, None)
             if not isinstance(_v, type(None)) and v == _v:
                 continue

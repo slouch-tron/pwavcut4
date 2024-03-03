@@ -355,6 +355,7 @@ class slotHolder(portHolder):
         self.DrawInfoWin()
         if self.Importer:
             self.Importer.Draw()
+            self.Importer.Update()
             self.Importer.InfoWin.refresh()
 
         if self.selectedSlot.PitchObj:
@@ -433,7 +434,7 @@ class slotHolder(portHolder):
                 '-' : self.DecSlotCtrlCh,
                 '=' : self.IncSlotCtrlCh,
                 '+' : self.IncSlotCtrlCh,
-                'F' : self.ImportFile,
+                'I' : self.ImportFile,
                 'H' : self.DrawHelpWin,
                 260 : self.dec_selected_ix,
                 261 : self.inc_selected_ix,
