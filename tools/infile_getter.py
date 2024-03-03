@@ -12,6 +12,7 @@ from enum import Enum, auto
 from .utils import INFILE_CONVERT_CMD_FMT   
 from .defaults import DEFAULT_WAV_IN_DIR, CFG_PATH, pr_debug, DEBUG
 from .log_setup import GET_LOGGER
+from .cfg_setup import CFGSAVE, CFGLOAD
 
 #RECOPY      = int(os.environ.get('RECOPY', 1))
 #RECONVERT   = int(os.environ.get('RECONVERT', 1))
@@ -47,20 +48,32 @@ BLINKCOLORS = [56, 66, 76, 86]
 BLINKCOLORS = [232, 238, 244, 250, 255, 231, 230, 229, 228, 227, 226, 225, 232, 232, 232, 232]
 BLINKCOLORS = [226, 232, 227, 232, 228, 232, 229, 232, 230, 232, 231, 232]
 
+DEFAULT_MODE_IX = 1
+
 
 class InfileGetter():
     ''' Get file with download, link, name, 
         Convert file to FILE_000.wav, in WAV_IN for the sampler.
     '''
+    ID          = 0
     STATES      = States
     MODES       = CopyModes
     DEST_DIR    = DEFAULT_WAV_IN_DIR
     CONVERT_DIR = DEFAULT_CONVERT_DIR
-    COORDS_INFO = (20, 48, 22, 61)
-
     not os.path.isdir(CONVERT_DIR) and os.mkdir(CONVERT_DIR)
+    COORDS_INFO = (20, 48, 22, 61)
+    DEFAULT_CFG = dict(
+        copy_mode_val=DEFAULT_MODE_IX, 
+        recopy=True, reconvert=True, 
+        infile=None,
+        )
+
 
     def __init__(self, **kwa):
+        self.id = InfileGetter.ID
+        InfileGetter.ID += 1
+        self.devname        = f"{self.__class__.__name__}{self.id:02d}"
+
         self.convert_target = kwa.get('convert_target', None)
         self.copy_target    = kwa.get('copy_target', None)
         self.uri            = kwa.get('uri', None)
@@ -78,7 +91,7 @@ class InfileGetter():
         self.recopy     = int(os.environ.get('RECOPY', 1))
         self.reconvert  = int(os.environ.get('RECONVERT', 1))
 
-        self.copy_mode      = self.MODES.YTDL
+        self.copy_mode      = self.MODES.FILE
 
 
     def __str__(self):
@@ -209,6 +222,14 @@ class InfileGetter():
             raise TypeError     ## value is not instance of 'CopyMode'?
 
         self._copy_mode = val
+
+    @property
+    def copy_mode_val(self):
+        return self.copy_mode.value
+
+    @copy_mode_val.setter
+    def copy_mode_val(self, ix):
+        self.copy_mode = self.MODES(ix)
 
     #######################################################################
 
@@ -510,8 +531,32 @@ class InfileGetter():
 
         return self._cfg_filename
 
+    @property
+    def CfgDict(self):
+        return dict(
+            uri=self.uri,
+            copy_target=self.copy_target,
+            convert_target=self.convert_target,
+            copy_mode_val=self.copy_mode_val,
+            recopy=self.recopy,
+            reconvert=self.reconvert,
+            )
 
-    def CfgSave(self):
+    def CfgSave(self):  CFGSAVE(self, self.devname)
+    def CfgLoad(self):  CFGLOAD(self, self.devname)
+
+    @property
+    def uri(self):
+        if not hasattr(self, '_uri'):
+            self._uri = None
+        return self._uri
+
+    @uri.setter
+    def uri(self, val):
+        self._uri = val
+
+
+    def CfgSave2(self):
         PREV = dict()
         DATA = dict()
 
@@ -533,7 +578,7 @@ class InfileGetter():
             with open(self.cfg_filename, 'w') as cfgf:
                 yaml.dump(PREV, cfgf)
 
-    def CfgLoad(self):
+    def CfgLoad2(self):
         DATA = dict()
         if os.path.isfile(self.cfg_filename):
             with open(self.cfg_filename, 'r') as cfgf:

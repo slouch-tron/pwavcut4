@@ -306,7 +306,7 @@ class slotHolder(portHolder):
             self._Importer = None
 
         if not self._Importer:
-            self.Importer = InfileGetter(Log=self.Log, logger=self.logger)
+            self.Importer = InfileGetter(Log=self.Log)
 
         return self._Importer
 

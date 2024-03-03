@@ -21,6 +21,8 @@ from .defaults import (
         CFG_PATH,
         )
 
+from .cfg_setup import CFGSAVE, CFGLOAD
+
 
 ## to compare when saving cfg, dont save defaults
 DEFAULT_POS0    = 0.0
@@ -32,6 +34,18 @@ DEFAULT_LOCK_ST = False
 DEFAULT_RETRIG  = True
 DEFAULT_CTRL_CH = 1
 
+DEFAULT_CFG_DICT = dict(
+    pos0=DEFAULT_POS0,
+    pos1=DEFAULT_POS1,
+    bpm=DEFAULT_BPM,
+    shift_tempo=DEFAULT_SHIFT,
+    ctrl_ch=DEFAULT_CTRL_CH,
+    infile=None,
+    lock_length=DEFAULT_LOCK,
+    lock_length_switch=DEFAULT_LOCK_ST,
+    retrigger=DEFAULT_RETRIG,
+    )
+
 
 class wcSlot():
     ID = 0
@@ -41,6 +55,7 @@ class wcSlot():
     #SRC_OUT_DIR = DEFAULT_SRC_OUT_DIR  ## 'need to know' basis?
     OK_FILE_TYPES   = OK_FILE_TYPES
     #CFG_SAVE_ATTRS  = ['pos0', 'pos1', 'bpm', 'shift_tempo', 'infile']
+    DEFAULT_CFG = DEFAULT_CFG_DICT
 
     def __init__(self, **kwa):
         self.id     = wcSlot.ID
@@ -143,7 +158,7 @@ class wcSlot():
     @property
     def pos0(self):
         if not hasattr(self, '_pos0'):  
-            self._pos0 = DEFAULT_POS0
+            self._pos0 = self.DEFAULT_CFG['pos0']
         return self._pos0
 
     @pos0.setter
@@ -158,7 +173,7 @@ class wcSlot():
     @property
     def pos1(self):
         if not hasattr(self, '_pos1'):  
-            self._pos1 = DEFAULT_POS1
+            self._pos1 = self.DEFAULT_CFG['pos1']
         return self._pos1
 
     @pos1.setter
@@ -189,7 +204,7 @@ class wcSlot():
     @property
     def lock_length(self):
         if not hasattr(self, '_lock_length'):
-            self._lock_length = 12.0
+            self._lock_length = self.DEFAULT_CFG['lock_length']
 
         return self._lock_length
 
@@ -200,7 +215,7 @@ class wcSlot():
     @property
     def lock_length_switch(self):
         if not hasattr(self, '_lock_length_switch'):
-            self._lock_length_switch = False
+            self._lock_length_switch = self.DEFAULT_CFG['lock_length_switch']
 
         return self._lock_length_switch
 
@@ -222,7 +237,7 @@ class wcSlot():
     @property
     def bpm(self):
         if not hasattr(self, '_bpm'):
-            self._bpm = DEFAULT_BPM
+            self._bpm = self.DEFAULT_CFG['bpm']
         return self._bpm
 
     @bpm.setter
@@ -233,7 +248,7 @@ class wcSlot():
     @property
     def shift_tempo(self):
         if not hasattr(self, '_shift_tempo'):
-            self._shift_tempo = DEFAULT_SHIFT
+            self._shift_tempo = self.DEFAULT_CFG['shift_tempo']
         return self._shift_tempo
 
     @shift_tempo.setter
@@ -243,7 +258,7 @@ class wcSlot():
     @property
     def ctrl_ch(self):
         if not hasattr(self, '_ctrl_ch'):
-            self._ctrl_ch = DEFAULT_CTRL_CH
+            self._ctrl_ch = self.DEFAULT_CFG['ctrl_ch']
 
         return self._ctrl_ch
 
@@ -399,65 +414,28 @@ class wcSlot():
 
     @property
     def CfgDict(self):
-        _data = dict(
+        return dict(
             pos0=self.pos0,
             pos1=self.pos1,
             bpm=self.bpm,
             shift_tempo=self.shift_tempo,
             ctrl_ch=self.ctrl_ch,
-            infile=self.infile,
+            #infile=self.infile,
+            infile=(os.path.split(self.infile)[-1] if self.infile else self.infile),
             lock_length=self.lock_length,
             lock_length_switch=self.lock_length_switch,
             retrigger=self.retrigger,
             )
 
-        return _data
-
-    def _cfg_dict_trim(self):
-        _data = self.CfgDict
-
-        _data.get('pos0') == DEFAULT_POS0 and _data.pop('pos0')
-        _data.get('pos1') == DEFAULT_POS1 and _data.pop('pos1')
-        _data.get('bpm') == DEFAULT_BPM and _data.pop('bpm')
-        _data.get('shift_tempo') == DEFAULT_SHIFT and _data.pop('shift_tempo')
-        _data.get('ctrl_ch') == self.slotnum and _data.pop('ctrl_ch')
-        not self.infile and _data.pop('infile')
-        _data.get('lock_length') == DEFAULT_LOCK and _data.pop('lock_length')
-        _data.get('lock_length_switch') == DEFAULT_LOCK_ST and _data.pop('lock_length_switch')
-        _data.get('retrigger') == DEFAULT_RETRIG and _data.pop('retrigger')
-
-        return _data
-
-
+    def CfgLoad(self):  CFGLOAD(self, self.slotname)
     def CfgSave(self):
-        DATA  = dict()                  ## data from file, file may not exist
-        _data = self._cfg_dict_trim()   ## data from this Class, keys w/default values removed
-
-        if os.path.isfile(self.cfg_filename):
-            with open(self.cfg_filename, 'r') as fp:
-                DATA = yaml.full_load(fp)
-
-            DATA.update({ self.slotname : _data })
-
-        if _data:
-            with open(self.cfg_filename, 'w') as fp:
-                yaml.dump(DATA, fp)
+        _cfgdict = None     ## unneccessary but i dont like it saving default ch!
+        if self.slotnum == self.ctrl_ch:
+            _cfgdict = self.CfgDict
+            _cfgdict.pop('ctrl_ch')
         
+        CFGSAVE(self, self.slotname, cfgdict=_cfgdict)
 
-    def CfgLoad(self):
-        if os.path.isfile(self.cfg_filename):
-            with open(self.cfg_filename, 'r') as cfgf:
-                DATA = yaml.full_load(cfgf)
-
-            _data = DATA.get(self.slotname, None)
-
-            if _data:
-                for attr in [   'pos0', 'pos1', 'bpm', 'shift_tempo', 'infile', 'ctrl_ch', 
-                                'lock_length_switch', 'lock_length', 'retrigger',   ]:
-                    _val = _data.get(attr, None)
-                    if _val != None:
-                        setattr(self, attr, _val)
-   
     ############################################################################
     ############################################################################
 
