@@ -28,6 +28,7 @@ DEFAULT_POS1    = 8.0
 DEFAULT_BPM     = 120.0
 DEFAULT_SHIFT   = 120.0
 DEFAULT_LOCK    = 12.0
+DEFAULT_LOCK_ST = False
 DEFAULT_RETRIG  = True
 DEFAULT_CTRL_CH = 1
 
@@ -39,7 +40,7 @@ class wcSlot():
     WAV_OUT_DIR = DEFAULT_WAV_OUT_DIR
     #SRC_OUT_DIR = DEFAULT_SRC_OUT_DIR  ## 'need to know' basis?
     OK_FILE_TYPES   = OK_FILE_TYPES
-    CFG_SAVE_ATTRS  = ['pos0', 'pos1', 'bpm', 'shift_tempo', 'infile']
+    #CFG_SAVE_ATTRS  = ['pos0', 'pos1', 'bpm', 'shift_tempo', 'infile']
 
     def __init__(self, **kwa):
         self.id     = wcSlot.ID
@@ -47,7 +48,9 @@ class wcSlot():
 
         self.slotnum    = kwa.get('slotnum', 0)
         #self.stdscr     = kwa.get('stdscr', None)
-        self.Log        = kwa.get('Log', pr_debug)
+        self.Log        = kwa.get('Log', print)
+
+        #self.logger     = kwa.get('logger', None)
         self.debug      = kwa.get('debug', 0)
         self.ctrl_ch    = kwa.get('ctrl_ch', self.ctrl_ch)
 
@@ -61,7 +64,8 @@ class wcSlot():
         self.slotname   = f"slot{self.slotnum:02d}"
         self.out_path   = os.path.join(self.WAV_OUT_DIR, self.slotname)
         if not os.path.isdir(self.out_path):
-            pr_debug(f"make dir {self.out_path}")
+            #pr_debug(f"make dir {self.out_path}")
+            self.Log(f"make dir {self.out_path}")
             os.mkdir(self.out_path)
 
         self.outfile = os.path.join(self.out_path, "OUT.wav")
@@ -69,8 +73,7 @@ class wcSlot():
         self.recfile = os.path.join(self.out_path, "REC.wav")
         self.monfile = os.path.join(self.out_path, "MON.wav")
 
-
-        #self.Log(f"{self.slotname} initialized!")
+        self.Log(f"{self.slotname} initialized!")
 
 
     def __str__(self):
@@ -390,61 +393,70 @@ class wcSlot():
     def cfg_filename(self):
         if not hasattr(self, '_cfg_filename'):
             _file = os.path.splitext(os.path.split(sys.argv[0])[1])[0] + ".yml"
-            #self._cfg_filename = _file
             self._cfg_filename = os.path.join(CFG_PATH, _file)
 
         return self._cfg_filename
 
+    @property
+    def CfgDict(self):
+        _data = dict(
+            pos0=self.pos0,
+            pos1=self.pos1,
+            bpm=self.bpm,
+            shift_tempo=self.shift_tempo,
+            ctrl_ch=self.ctrl_ch,
+            infile=self.infile,
+            lock_length=self.lock_length,
+            lock_length_switch=self.lock_length_switch,
+            retrigger=self.retrigger,
+            )
+
+        return _data
+
+    def _cfg_dict_trim(self):
+        _data = self.CfgDict
+
+        _data.get('pos0') == DEFAULT_POS0 and _data.pop('pos0')
+        _data.get('pos1') == DEFAULT_POS1 and _data.pop('pos1')
+        _data.get('bpm') == DEFAULT_BPM and _data.pop('bpm')
+        _data.get('shift_tempo') == DEFAULT_SHIFT and _data.pop('shift_tempo')
+        _data.get('ctrl_ch') == self.slotnum and _data.pop('ctrl_ch')
+        not self.infile and _data.pop('infile')
+        _data.get('lock_length') == DEFAULT_LOCK and _data.pop('lock_length')
+        _data.get('lock_length_switch') == DEFAULT_LOCK_ST and _data.pop('lock_length_switch')
+        _data.get('retrigger') == DEFAULT_RETRIG and _data.pop('retrigger')
+
+        return _data
+
 
     def CfgSave(self):
-        DATA = dict()
-        _dict = dict()
+        DATA  = dict()                  ## data from file, file may not exist
+        _data = self._cfg_dict_trim()   ## data from this Class, keys w/default values removed
 
-        (self.pos0 != DEFAULT_POS0) and _dict.update(dict(pos0=self.pos0))
-        (self.pos1 != DEFAULT_POS1) and _dict.update(dict(pos1=self.pos1))
-        (self.bpm != DEFAULT_BPM) and _dict.update(dict(bpm=self.bpm))
-        (self.shift_tempo != DEFAULT_SHIFT) and _dict.update(dict(shift_tempo=self.shift_tempo))
-        (self.ctrl_ch != DEFAULT_CTRL_CH) and _dict.update(dict(ctrl_ch=self.ctrl_ch))
-        self.infile and _dict.update(dict(infile=self.infile))
-        (self.lock_length != DEFAULT_LOCK) and _dict.update(dict(lock_length=self.lock_length))
-        self.lock_length_switch and _dict.update(dict(lock=self.lock_length_switch))
-        (self.retrigger != DEFAULT_RETRIG) and _dict.update(dict(retrigger=self.retrigger))
+        if os.path.isfile(self.cfg_filename):
+            with open(self.cfg_filename, 'r') as fp:
+                DATA = yaml.full_load(fp)
+
+            DATA.update({ self.slotname : _data })
+
+        if _data:
+            with open(self.cfg_filename, 'w') as fp:
+                yaml.dump(DATA, fp)
         
-        if _dict:   ## is there non-default data to save?
-            if os.path.isfile(self.cfg_filename):
-                with open(self.cfg_filename, 'r') as cfgf:
-                    DATA = yaml.full_load(cfgf)
-            DATA.update({ self.slotname : _dict })
-
-            with open(self.cfg_filename, 'w') as cfgf:
-                yaml.dump(DATA, cfgf)
-
 
     def CfgLoad(self):
         if os.path.isfile(self.cfg_filename):
             with open(self.cfg_filename, 'r') as cfgf:
                 DATA = yaml.full_load(cfgf)
+
             _data = DATA.get(self.slotname, None)
+
             if _data:
-                _val = _data.get('pos0', None)
-                if _val:    self.pos0 = _val
-                _val = _data.get('pos1', None)
-                if _val:    self.pos1 = _val
-                _val = _data.get('bpm', None)
-                if _val:    self.bpm = _val
-                _val = _data.get('shift_tempo', None)
-                if _val:    self.shift_tempo = _val
-                _val = _data.get('infile', None)
-                if _val:    self.infile = _val
-                _val = _data.get('ctrl_ch', None)
-                if _val:    self.ctrl_ch = _val
-                _val = _data.get('lock', None)
-                if _val != None:    self.lock_length_switch = _val
-                _val = _data.get('lock_length', None)
-                if _val:    self.lock_length = _val
-                _val = _data.get('retrigger', None)
-                if _val != None:    self.retrigger = _val
-                #self.Log(f"{self.slotname}.CFGLOAD") ## print once in the caller 'slots loaded'
+                for attr in [   'pos0', 'pos1', 'bpm', 'shift_tempo', 'infile', 'ctrl_ch', 
+                                'lock_length_switch', 'lock_length', 'retrigger',   ]:
+                    _val = _data.get(attr, None)
+                    if _val != None:
+                        setattr(self, attr, _val)
    
     ############################################################################
     ############################################################################
@@ -482,18 +494,14 @@ class wcSlot():
         else:
             self.PitchObj = PitchesSlicer
 
-
-
-                
-
-   
-
     ############################################################################
     ############################################################################
 
     def parse_argv(self, argv):
         print(f"parse_argv: START from {argv[0]}")
-        parser = argparse.ArgumentParser(description="cmd line options for standalone wcSlot demo")
+        parser = argparse.ArgumentParser(
+                description="cmd line options for standalone wcSlot demo")
+
         parser.add_argument('-0', '--pos0', dest='pos0', type=str, help='pos0')
         parser.add_argument('-1', '--pos1', dest='pos1', type=str, help='pos1')
         parser.add_argument('-b', '--bpm', dest='bpm', type=str, help='bpm')

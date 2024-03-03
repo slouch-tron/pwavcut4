@@ -17,8 +17,10 @@ from .defaults import (
         )
 
 
+
 from .utils import EW_PROMPT, DRAWHELPWIN
 from .draw_slots_class import DrawSlotsClass
+from .log_setup import GET_LOGGER
 
 
 class slotHolder(portHolder):
@@ -33,12 +35,21 @@ class slotHolder(portHolder):
     MIDI_CH_KIT = DEFAULT_MIDI_LISTEN_CH_KIT
 
     def __init__(self, stdscr, **kwa):
+        self.devname        = self.__class__.__name__
+        self.logger         = GET_LOGGER(appname=self.devname)
+
         self.slot_count     = kwa.get('slot_count', 8)
         self.slicer_count   = kwa.get('slicer_count', 4)
 
         self.slots = []
         for s in range(self.slot_count):
-            self.slots.append(wcSlot(slotnum=s, ctrl_ch=s, Log=self.Log))
+            self.slots.append(wcSlot(
+                slotnum=s, 
+                ctrl_ch=s, 
+                Log=self.Log, 
+                #logger=self.logger,
+                ))
+
 
         self.slicers = []
 
@@ -49,7 +60,9 @@ class slotHolder(portHolder):
         self.last_func  = 'None'
         self.last_msg_i = None
         self.last_msg_c = None
+        self.last_msgs  = []
         self.cyc_ct = 0
+
 
 
     def __str__(self):
@@ -69,32 +82,39 @@ class slotHolder(portHolder):
             ])
 
 
-    def TermPrint(self):
+    @property
+    def log_lines(self):
+        if not hasattr(self, '_log_lines'):
+            self._log_lines = list()
+            self.Log("log_lines init")
+
+        return self._log_lines
+
+
+    def Log(self, msg, level='visual', also=1):
+        ''' Pass this function to a class like wcSlot or InfileGetter.
+            Defaults to printing on logWin.
+        '''
+        if level == 'visual':   
+            self.log_lines.append(msg)
+            if not also:    
+                return
+
+        _func = getattr(self.logger, level, None) or self.logger.debug
+        _func(msg)
+
+    #def VisLog(self, msg, also=1):                  self.Log(msg, level='visual', also=also)
+    def Log0(self, msg, level='debug', also=1):     self.Log(msg, level=level, also=also)
+
+
+    def Quit(self):
         curses.endwin()
         print("____")
         print(self)
         for f in self.slots:
             print(f)
 
-
-    @property
-    def log_lines(self):
-        if not hasattr(self, '_log_lines'):
-            self._log_lines = list()
-            self.Log("BEGIN")
-
-        return self._log_lines
-
-    def Log(self, txt, level='DEBUG'):
-        self.log_lines.append(txt)
-        #while len(self.log_lines) > 16:
-        #    self.log_lines.pop(0)
-
-
-    def Quit(self):
-        self.TermPrint()
         sys.exit()
-
 
     ## changeable with input like keys or midi messages
     #############################################################
@@ -286,7 +306,7 @@ class slotHolder(portHolder):
             self._Importer = None
 
         if not self._Importer:
-            self.Importer = InfileGetter(Log=self.Log)
+            self.Importer = InfileGetter(Log=self.Log, logger=self.logger)
 
         return self._Importer
 
@@ -327,6 +347,8 @@ class slotHolder(portHolder):
         self.stdscr.addstr(0, 0, str(self))
         #self.stdscr.addstr(1, 0, str(list(self.keyDict.keys())))
         self.stdscr.addstr(1, 0, f"Draw per sec: {self.hz:9.2f}")
+        _chs = [self.MIDI_CH_CTL, self.MIDI_CH_MOD, self.MIDI_CH_KIT]
+        self.stdscr.addstr(1, 40, str(_chs))
 
         self.DrawSlots()
         self.DrawLogWin()
@@ -375,6 +397,10 @@ class slotHolder(portHolder):
 
                 self.Log("CONFIG SAVED" if _chr in 'Ss' else "CONFIG LOADED")
                 return True
+
+    @property
+    def CfgDict(self):
+        return dict()
 
 
     ############################################################################
@@ -469,7 +495,8 @@ class slotHolder(portHolder):
             if msg_i:
                 self.last_msg_i = msg_i
                 if self.port_f:
-                    self.port_f.send(msg_i.copy())
+                    self.port_f.send(msg_i)
+                    self.last_msg_f = msg_i
 
                 self.msgCheck_NN(msg_i)
 

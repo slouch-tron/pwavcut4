@@ -10,9 +10,9 @@ import yaml
 
 from enum import Enum, auto
 from .utils import INFILE_CONVERT_CMD_FMT   
-from .defaults import DEFAULT_WAV_IN_DIR, CFG_PATH
+from .defaults import DEFAULT_WAV_IN_DIR, CFG_PATH, pr_debug, DEBUG
+from .log_setup import GET_LOGGER
 
-DEBUG       = int(os.environ.get('DEBUG', 0))
 #RECOPY      = int(os.environ.get('RECOPY', 1))
 #RECONVERT   = int(os.environ.get('RECONVERT', 1))
 
@@ -66,10 +66,14 @@ class InfileGetter():
         self.uri            = kwa.get('uri', None)
         #self.stdscr         = kwa.get('stdscr', None)
 
-        self.Log            = kwa.get('Log', print)
+        #self.Log            = kwa.get('Log', self.Log)
+        self.logger         = kwa.get('logger', GET_LOGGER(appname=self.__class__.__name__))
         self.errors         = []
         self.proc_start     = None
+        self.proc_end       = None
         self.last_cmd       = None
+        self.proc_out       = None
+        self.proc_err       = None
 
         self.recopy     = int(os.environ.get('RECOPY', 1))
         self.reconvert  = int(os.environ.get('RECONVERT', 1))
@@ -83,19 +87,25 @@ class InfileGetter():
             self.__class__.__name__,
             self.state.name,
             str(self.uri),
-            str(self.errors),
-            "{:6.2f} sec".format(time.time() - self.proc_start) if self.proc_start else '-',
+            f"err: ({len(self.errors)})",
+            f"{self.proc_runtime:6.2f} sec" if self.proc_runtime else '-',
             ])
 
     def __del__(self):
         self.proc = False
 
+    def Log(self, msg, level='debug'):
+        _func = getattr(self.logger, level, None) or self.logger.debug
+        _func(msg)
+
+
     def logDecor(func, *aa, **kwa):
         def inner(self, *aa, **kwa):
-            _head = f"{self.__class__.__name__}.{func.__name__}"
+            _head = f"{self.__class__.__name__}.{func.__name__}("
             _ostr = _head
-            _ostr += f", {str(aa)}" if aa else ""
+            _ostr += f"{str(aa)}" if aa else ""
             _ostr += f", {str(kwa)}" if kwa else ""
+            _ostr += ")"
             self.Log(_ostr)
 
             _start  = time.time()
@@ -103,8 +113,8 @@ class InfileGetter():
             _finish = (time.time() - _start) #* 1000
 
             ## makes no sense for proc-starter function that returns immediately
-            _ostr = _head + f", return '{_return}', {_finish:.2f} sec elapsed"
-            self.Log(_ostr)
+            #_ostr = _head + f", return '{_return}', {_finish:.2f} sec elapsed"
+            #self.Log(_ostr)
             return _return
 
         return inner
@@ -129,43 +139,55 @@ class InfileGetter():
 
     def Update(self):
         if self.state in [self.STATES.ERROR, self.STATES.CANCEL]:
-            self.proc = False
+            #self.proc = False
             return self.state
 
-        if self.state == self.STATES.COPY:
+        if self.state in [self.STATES.COPY, self.STATES.CONVERT]:
             _poll = self.proc.poll()
             if _poll == None:   ## still running
-                pass
-                #self.pr_poll()
-            elif _poll == 0:    ## good result
-                self.Log("proc rc=0")
-                self.proc_start = None
-                self.state = self.STATES.CONVERT
-                self.Convert()
-            else:
-                self.errors.append(f"FAIL, proc poll={_poll}")
-                self.Log(f"FAIL, proc poll={_poll}")
+                return
+
+            if _poll != 0:
+                self.Log(f"{self.state.name.upper()} FAIL, proc poll={_poll}")
                 self.state = self.STATES.ERROR
+                return
+
+            self.Log(" ".join([
+                f"{self.state.name.upper()} proc poll={_poll}",
+                f"{self.proc_runtime:5.2f} sec elapsed",
+                ]))
+
+            if _poll == 0:    ## good result
+                if self.state == self.STATES.COPY:
+                    self.state = self.STATES.CONVERT
+                    self.Convert()
+                elif self.state == self.STATES.CONVERT:
+                    self.state = self.STATES.READY
+                else:
+                    raise TypeError
+
 
         elif self.state == self.STATES.CONVERT:
             _poll = self.proc.poll()
             if _poll == None:
-                pass
-            elif _poll == 0: 
-                self.Log("proc rc=0")
+                return
+
+            if _poll == 0: 
+                self.Log("CONVERT proc rc=0")
                 self.proc_start = None
                 self.proc = None
                 self.state = self.STATES.READY
                 #self.Log(f"{self.__class__.__name__}.state = {self.state.name}")
                 #self.InfoWin and self.InfoWin.clear()  ## dont do draw stuff outside 'Draw'!
             else:
-                self.errors.append(f"FAIL, proc poll={_poll}")
-                self.Log(f"FAIL, proc poll={_poll}")
+                self.Log("CONVERT FAIL, proc poll={_poll}")
+                #self.errors.append(f"FAIL, proc poll={_poll}")
                 self.state = self.STATES.ERROR
 
         elif self.state == self.STATES.READY:
             if not os.path.isfile(self.convert_target):
-                self.errors.append(f"was READY but file went missing: '{self.convert_target}'")
+                self.Log("state was READY but file went missing: '{self.convert_target}'")
+                #self.errors.append(f"was READY but file went missing: '{self.convert_target}'")
                 self.state = self.STATES.ERROR
 
         else:
@@ -183,7 +205,7 @@ class InfileGetter():
     @copy_mode.setter
     def copy_mode(self, val):
         if not isinstance(val, self.MODES):
-            print(f"copy_mode.setter: value '{val}' is not {self.MODES}")
+            self.Log(f"copy_mode.setter: value '{val}' is not {self.MODES}")
             raise TypeError     ## value is not instance of 'CopyMode'?
 
         self._copy_mode = val
@@ -200,12 +222,11 @@ class InfileGetter():
     @proc.setter
     def proc(self, cmd):
 
-        self.proc
-
-        if self._proc:   
+        #self.proc
+        if self.proc:   
+            self.Log(f"proc.setter | end after {self.proc_runtime:5.2f} sec")
             self._proc.terminate()
             self._proc = None
-            #print("terminated previous proc")
 
         if not cmd:
             self._proc = False
@@ -221,8 +242,13 @@ class InfileGetter():
                 )
             
             self.proc_start = time.time()
-            self.Log(f"CMD: # {cmd}")
-            DEBUG and print(f"\033[33m## {cmd}\033[0m", file=sys.stderr)
+            self.Log("proc.setter CMD")
+            self.Log(f"\t{cmd}")
+
+    @property
+    def proc_runtime(self):
+        if self.proc:
+            return time.time() - self.proc_start
 
 
     ## this seems to 'block', oh well do we or do we not want to see the output?
@@ -249,11 +275,10 @@ class InfileGetter():
 
     #######################################################################
 
-    #@logDecor
-    def _WebCopy(self, mode=CopyModes.SCP, recopy=False):
+    @logDecor
+    def _WebCopy(self, mode=CopyModes.SCP):
         def _print(txt, err=0):
             self.Log(f"Copy | {txt}")
-            DEBUG and print(f"\033[33mCopy | {txt}\033[0m", file=sys.stderr)
             err and self.errors.append(txt)
 
         #_recopy = recopy or RECOPY
@@ -307,7 +332,6 @@ class InfileGetter():
     def Convert(self, reconvert=False):
         def _print(txt, err=0):
             self.Log(f"Convert | {txt}         ")
-            DEBUG and print(f"\033[33mConvert | {txt}\033[0m", file=sys.stderr)
             err and self.errors.append(err)
 
         if os.path.isfile(self.copy_target):

@@ -24,7 +24,7 @@ OK_ARCHS        = ['armv7l', 'x86_64', 'aarch64']   ## RPI4 uses 'aarch64', old 
 
 
 ## import to other places for consistency
-DEBUG       = int(os.environ.get('DEBUG', 0))
+DEBUG       = int(os.environ.get('DEBUG', 1))
 TRANSPARENT = int(os.environ.get('TRANSPARENT', 1))
 
 DEFAULT_MIDI_CHS = dict(
@@ -69,8 +69,7 @@ def CURSE_INIT(stdscr):
 
 
 def MAKE_DEFAULT_DIRS():
-    col = "\033[33m"; end = "\033[0m"
-    print(f"{col}MAKE DEFAULT DIRECTORIES{end}", file=sys.stderr)
+    pr_debug(f"MAKE DEFAULT_DIRECTORIES")
 
     for DIR in [
         DEFAULT_WAV_IN_DIR, 
@@ -81,8 +80,10 @@ def MAKE_DEFAULT_DIRS():
         ]:
         if not os.path.isdir(DIR):
             cmd = f"mkdir {DIR}"
-            print(f"{col} {cmd}{end}", file=sys.stderr)
+            pr_debug(f"MAKE_DEFAULT_DIRS | {cmd}")
             os.system(cmd)
+
+
 
 
 def GET_CFG(cfgfile=None, dump=False)->dict:   ## cfgfile = yaml filename string
@@ -95,7 +96,7 @@ def GET_CFG(cfgfile=None, dump=False)->dict:   ## cfgfile = yaml filename string
     '''
 
     def _print(txt):
-        print(f"\033[33;2mGET_CFG | {txt}\033[0m", file=sys.stderr)
+        pr_debug(f"GET_CFG | {txt}")
 
     default_cfg = dict(
         DEFAULT_MIDI_CCS=DEFAULT_MIDI_CCS,
@@ -146,7 +147,9 @@ def GET_CFG(cfgfile=None, dump=False)->dict:   ## cfgfile = yaml filename string
 ######################################################################
 ######################################################################
 def pr_debug(txt):
-    DEBUG and print(f"\033[32m{txt}\033[0m", file=sys.stderr)
+    if DEBUG:
+        _file = os.path.splitext(os.path.split(__file__)[-1])[0]
+        print(f"\033[33m{_file} | {txt}\033[0m", file=sys.stderr)
 
 
 def cfg2str(cfgdict):

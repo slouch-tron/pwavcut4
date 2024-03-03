@@ -77,6 +77,115 @@ class portHolder():
     def dec_ctrl_ch(self):          self.ctrl_ch -= 1
     '''
 
+    ## last msg holders, adds to lists
+    ###################################################################
+    @property
+    def last_msg_i(self):
+        if not hasattr(self, '_last_msg_i'):
+            self._last_msg_i = None
+
+        return self._last_msg_i
+      
+    @last_msg_i.setter
+    def last_msg_i(self, msg):
+        self._last_msg_i = msg
+        msg and self.msgs_i.append(msg)
+
+    @property
+    def last_msg_o(self):
+        if not hasattr(self, '_last_msg_o'):
+            self._last_msg_o = None
+ 
+        return self._last_msg_o
+      
+    @last_msg_o.setter
+    def last_msg_o(self, msg):
+        self._last_msg_o = msg
+        msg and self.msgs_o.append(msg)
+
+    @property
+    def last_msg_c(self):
+        if not hasattr(self, '_last_msg_c'):
+            self._last_msg_c = None
+ 
+        return self._last_msg_c
+      
+    @last_msg_c.setter
+    def last_msg_c(self, msg):
+        self._last_msg_c = msg
+        msg and self.msgs_c.append(msg)
+
+    @property
+    def last_msg_f(self):
+        if not hasattr(self, '_last_msg_f'):
+            self._last_msg_f = None
+ 
+        return self._last_msg_f
+      
+    @last_msg_f.setter
+    def last_msg_f(self, msg):
+        self._last_msg_f = msg
+        msg and self.msgs_f.append(msg)
+
+    ## lists of previous msgs, for display in the app to see ports working
+    ###################################################################
+    @property
+    def msgs_i(self):
+        if not hasattr(self, '_msgs_i'):
+            self._msgs_i = []
+     
+        return self._msgs_i
+     
+    @msgs_i.setter
+    def msgs_i(self, val):
+        self._msgs_i = val
+
+    @property
+    def msgs_c(self):
+        if not hasattr(self, '_msgs_c'):
+            self._msgs_c = []
+     
+        return self._msgs_c
+     
+    @msgs_c.setter
+    def msgs_c(self, val):
+        self._msgs_c = val
+
+    @property
+    def msgs_o(self):
+        if not hasattr(self, '_msgs_o'):
+            self._msgs_o = []
+     
+        return self._msgs_o
+     
+    @msgs_o.setter
+    def msgs_o(self, val):
+        self._msgs_o = val
+
+    @property
+    def msgs_f(self):
+        if not hasattr(self, '_msgs_f'):
+            self._msgs_f = []
+     
+        return self._msgs_f
+     
+    @msgs_f.setter
+    def msgs_f(self, val):
+        self._msgs_f = val
+
+
+    @property
+    def msgs_ct_report(self):
+        return "ICOF | " + " | ".join([f"{len(xx):4d}" for xx in [
+            self.msgs_i,
+            self.msgs_c,
+            self.msgs_o,
+            self.msgs_f,
+            ]])
+
+
+
+
     ############################################################################
     ############################################################################
     ## call from main/run function

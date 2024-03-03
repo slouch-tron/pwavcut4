@@ -5,6 +5,17 @@ from .slicer_pitches import PitchesSlicer
 from .infile_getter import InfileGetter
 from .notes_window import NotesWin
 from .portholder import GET_PORT
+from .log_setup import GET_LOGGER
 
 from .utils import INFILE_CONVERT, NORMALIZE
 from .defaults import CURSE_INIT, GET_CFG
+
+
+import logging
+logging.addLevelName(12, 'VISUAL')
+def _visual(self, msg, *AA, **KWA):
+    if self.isEnabledFor(12):
+        self._log(12, msg, AA, **KWA)
+
+logging.Logger.visual = _visual
+
