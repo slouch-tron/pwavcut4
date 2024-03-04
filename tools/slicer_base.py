@@ -57,11 +57,12 @@ class Slicer(portHolder):
         self.id         = Slicer.ID
         Slicer.ID += 1
         self.devname    = f"{self.__class__.__name__}{self.id:02d}"
-        self.owner      = kwa.get('owner', 'SLICER')
+        #self.owner      = kwa.get('owner', 'SLICER')
+        self.owner      = kwa.get('owner', self.devname)
 
         self.infile     = kwa.get('infile', None)
         self.Log        = kwa.get('Log')
-        self.logger         = kwa.get('logger', GET_LOGGER(appname=self.devname))
+        self.logger     = kwa.get('logger', GET_LOGGER(appname=self.devname))
         #self.stdscr     = stdscr
         ## this class may need to just slice, without stdscr
         self.stdscr     = kwa.get('stdscr', None) or curses.wrapper(CURSE_INIT)
@@ -392,7 +393,7 @@ class Slicer(portHolder):
 
     def Reload(self):
         ## cant see this state, pyg loading blocks and when its done status is 'ready'
-        self.Log("{self.devname}.Reload()")
+        self.Log(f"{self.devname}.Reload()")
         self._state = self.STATES.LOADING
         self.sounds = dict()
         self.Draw()

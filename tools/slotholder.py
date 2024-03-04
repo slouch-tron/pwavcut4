@@ -34,9 +34,16 @@ class slotHolder(portHolder):
     MIDI_CH_MOD = DEFAULT_MIDI_LISTEN_CH_MOD
     MIDI_CH_KIT = DEFAULT_MIDI_LISTEN_CH_KIT
 
+    ID = 1
+
     def __init__(self, stdscr, **kwa):
-        self.devname        = self.__class__.__name__
+        self.id             = slotHolder.ID;    slotHolder.ID +=1
+        self.devname        = f"{self.__class__.__name__}{self.id:02d}"
+        ## these + add 'appname' search to Log function
         self.logger         = GET_LOGGER(appname=self.devname)
+        self.logger_ffmpeg  = GET_LOGGER(appname='do_ffmpeg')
+        self.logger_getfile = GET_LOGGER(appname='Importer')
+        self.logger_slot    = GET_LOGGER(appname='WcSlot')
 
         self.slot_count     = kwa.get('slot_count', 8)
         self.slicer_count   = kwa.get('slicer_count', 4)
@@ -90,19 +97,34 @@ class slotHolder(portHolder):
 
         return self._log_lines
 
+    @property
+    def LogsDict(self):
+        if not hasattr(self, '_LogsDict'):
+            self._LogsDict = dict(
+                WcSlot=self.logger_slot,
+                ffmpeg=self.logger_ffmpeg,
+                Importer=self.logger_getfile,
+                )
+
+        return self._LogsDict
+
 
     def Log(self, msg, **kwa):
         ''' Pass this function to a class like wcSlot or InfileGetter.
             Defaults to printing on logWin.
         '''
-        level = kwa.get('level', 'visual')
-        also  = kwa.get('also', 1)
+        level   = kwa.get('level', 'visual')
+        also    = kwa.get('also', 1)
+        appname = kwa.get('appname', None)
+
+
         if level == 'visual':   
             self.log_lines.append(msg)
             if not also:    
                 return
 
-        _func = getattr(self.logger, level, None) or self.logger.debug
+        _logger = self.LogsDict.get(appname, self.logger)
+        _func = getattr(_logger, level, None) or self.logger.debug
         _func(msg)
 
     #def VisLog(self, msg, also=1):                  self.Log(msg, level='visual', also=also)

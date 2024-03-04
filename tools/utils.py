@@ -11,6 +11,7 @@ from pydub import AudioSegment
 
 from .defaults import DEFAULT_WAV_IN_DIR, DEFAULT_SRC_OUT_DIR
 from .notes import midi_to_frequency2 as midi_to_frequency
+from .log_setup import GET_LOGGER
 
 
 ## where to keep this, if we phase 'utils' out.  defaults?
@@ -177,6 +178,15 @@ def DOFFMPEG(
     Log=None
     ):
 
+    def _Log(txt, level='debug'):
+        Log and Log("DDD" + txt, level=level)
+        logger.debug(txt)
+        curses.endwin()
+        print(dir(logger))
+        input()
+
+    ## maybe keep named loggers in the main class?
+    logger = GET_LOGGER(appname="doffmpeg")
 
     nkey = midi_to_ansi_note(pitch_ix)
     if not outfile:
@@ -228,10 +238,9 @@ def DOFFMPEG(
                     outfile,
                     )
 
-        if Log:
-            _freq = midi_to_frequency(pitch_ix)
-            Log(f"midi_to_frequency({pitch_ix}) = {_freq}", level='debug')
-            Log(f"\033[33m{cmd}\033[0m", level='debug')
+        _freq = midi_to_frequency(pitch_ix)
+        _Log(f"midi_to_frequency({pitch_ix}) = {_freq}", level='debug')
+        _Log(f"\033[33m{cmd}\033[0m", level='debug')
 
         return cmd
 

@@ -46,7 +46,7 @@ class PitchesSlicer(Slicer):
         if not self.infile:
             return False
 
-        #self.Log(f"{self.devname}.Slice: START, {kwa}")
+        self.Log(f"{self.devname}.Slice: START, {kwa}")
         _only_reload = kwa.get('reload', False)
         _shift_tempo = kwa.get('shift_tempo', self.shift_tempo)
         _bpm         = self.bpm
