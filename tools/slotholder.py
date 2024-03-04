@@ -91,10 +91,12 @@ class slotHolder(portHolder):
         return self._log_lines
 
 
-    def Log(self, msg, level='visual', also=1):
+    def Log(self, msg, **kwa):
         ''' Pass this function to a class like wcSlot or InfileGetter.
             Defaults to printing on logWin.
         '''
+        level = kwa.get('level', 'visual')
+        also  = kwa.get('also', 1)
         if level == 'visual':   
             self.log_lines.append(msg)
             if not also:    

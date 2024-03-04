@@ -5,11 +5,12 @@ import shlex, subprocess
 import curses
 import pygame
 from pygame.midi import midi_to_ansi_note
-from pygame.midi import midi_to_frequency
+#from pygame.midi import midi_to_frequency
 
 from pydub import AudioSegment
 
 from .defaults import DEFAULT_WAV_IN_DIR, DEFAULT_SRC_OUT_DIR
+from .notes import midi_to_frequency2 as midi_to_frequency
 
 
 ## where to keep this, if we phase 'utils' out.  defaults?
@@ -173,7 +174,9 @@ def DOFFMPEG(
     shift_tempo=1.0,
     outfile=None,   ## overrides dest_dir and label
     debug=0,
+    Log=None
     ):
+
 
     nkey = midi_to_ansi_note(pitch_ix)
     if not outfile:
@@ -225,7 +228,10 @@ def DOFFMPEG(
                     outfile,
                     )
 
-        debug and print(f"\033[33m{cmd}\033[0m", file=sys.stderr)
+        if Log:
+            _freq = midi_to_frequency(pitch_ix)
+            Log(f"midi_to_frequency({pitch_ix}) = {_freq}", level='debug')
+            Log(f"\033[33m{cmd}\033[0m", level='debug')
 
         return cmd
 

@@ -21,6 +21,7 @@ from .defaults import (
         CFG_PATH,
         )
 
+from .log_setup import GET_LOGGER
 from .cfg_setup import CFGSAVE, CFGLOAD
 
 
@@ -62,8 +63,10 @@ class wcSlot():
         wcSlot.ID   += 1
 
         self.slotnum    = kwa.get('slotnum', 0)
+        self.slotname   = f"slot{self.slotnum:02d}"
         #self.stdscr     = kwa.get('stdscr', None)
-        self.Log        = kwa.get('Log', print)
+        self.Log        = kwa.get('Log')
+        self.logger         = kwa.get('logger', GET_LOGGER(appname=self.slotname))
 
         #self.logger     = kwa.get('logger', None)
         self.debug      = kwa.get('debug', 0)
@@ -76,7 +79,6 @@ class wcSlot():
 
 
         ## would we want 'get next filename' for Recording for example?
-        self.slotname   = f"slot{self.slotnum:02d}"
         self.out_path   = os.path.join(self.WAV_OUT_DIR, self.slotname)
         if not os.path.isdir(self.out_path):
             #pr_debug(f"make dir {self.out_path}")
@@ -461,6 +463,7 @@ class wcSlot():
                 bpm=self.bpm, 
                 shift_tempo=self.shift_tempo,
                 ctrl_ch=self.slotnum,
+                Log=self.Log,
                 )
 
             self.Log(f"{self._PitchObj}")
@@ -470,7 +473,14 @@ class wcSlot():
         if self.PitchObj:
             self.PitchObj.Slice()
         else:
-            self.PitchObj = PitchesSlicer
+            #_infile = self.outfile if (self.bpm == self.shift_tempo) else self.modfile
+            self.PitchObj = PitchesSlicer#(
+                #infile=_infile, 
+                #bpm=self.bpm, 
+                #shift_tempo=self.shift_tempo,
+                #ctrl_ch=self.slotnum,
+                #Log=self.Log,
+                #)
 
     ############################################################################
     ############################################################################

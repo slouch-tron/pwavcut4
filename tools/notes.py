@@ -2,11 +2,14 @@
 ##  for ffmpeg settings when pitch shifting
 ## would this be better as a YAML or JSON?  no different i guess.
 
+import sys
 import json
 #import yaml
 
 from pygame.midi import midi_to_ansi_note
 from pygame.midi import midi_to_frequency
+
+DEBUG = 0
 
 NOTE_DICT = {       
     "C0"    : 16.35, 
@@ -122,9 +125,28 @@ NOTE_DICT = {
 
 NOTE_LIST = [ [note, NOTE_DICT[note]] for ix, note in enumerate(NOTE_DICT.keys()) ]
 
-
 def GET_KEY_IX(key):
     return list(NOTE_DICT).index(key) 
+
+
+
+## update pygame.midi_to_frequency with our more precise values
+######################################################################
+MAX_NOTE = 130
+def _generate_midi_to_frequency_dict():
+    M2F = dict()
+    for nn in range(MAX_NOTE):
+        _nname  = midi_to_ansi_note(nn)
+        _freq0  = NOTE_DICT.get(_nname, None)
+
+        _freq  = _freq0 if _freq0 else midi_to_frequency(nn)
+        M2F.update({ nn : _freq })
+
+    return M2F
+
+MIDI_TO_FREQ = _generate_midi_to_frequency_dict()
+def midi_to_frequency2(nn):
+    return MIDI_TO_FREQ.get(nn, None)
 
 
 
@@ -145,8 +167,12 @@ def _compare_test():    ## compares whats in pygame to our notes dict.  pretty m
             ]))
 
 
+
+
+
 if __name__ == '__main__':
     #[print(f"{i:02} : {f}") for i, f in enumerate(list(NOTE_DICT))]
     #print(str([x for x in NOTE_LIST]).replace(' ', '').replace("'", '"'))
     #print(json.dumps(NOTE_DICT, indent=2))
     _compare_test()
+    print(json.dumps(MIDI_TO_FREQ, indent=2))

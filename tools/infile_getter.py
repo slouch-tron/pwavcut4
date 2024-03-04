@@ -79,7 +79,7 @@ class InfileGetter():
         self.uri            = kwa.get('uri', None)
         #self.stdscr         = kwa.get('stdscr', None)
 
-        self.Log            = kwa.get('Log')
+        self.Log            = kwa.get('Log', print)
         self.logger         = kwa.get('logger', GET_LOGGER(appname=self.__class__.__name__))
         self.errors         = []
         self.proc_start     = None
@@ -98,7 +98,7 @@ class InfileGetter():
 
         return " | ".join([
             self.__class__.__name__,
-            self.state.name,
+            self.state.name if self.state else "",
             str(self.uri),
             f"err: ({len(self.errors)})",
             f"{self.proc_runtime:6.2f} sec" if self.proc_runtime else '-',
@@ -138,12 +138,13 @@ class InfileGetter():
         if not hasattr(self, '_state'):
             self._state = self.STATES.INIT
             self.Log(f"{self.__class__.__name__}.state = {self._state.name}")
+            #self.Log(f"state = {self._state}")
 
         return self._state 
 
     @state.setter
     def state(self, val):
-        _old = self._state 
+        _old = self.state 
         self._state = val
 
         if self._state != _old:
@@ -252,7 +253,7 @@ class InfileGetter():
 
     @property
     def proc_runtime(self):
-        if self.state in [self.STATES.COPY, self.STATES.CONVERT]:
+        if self.proc and self.state in [self.STATES.COPY, self.STATES.CONVERT]:
             return time.time() - self.proc_start
 
 

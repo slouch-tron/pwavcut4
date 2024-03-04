@@ -22,6 +22,7 @@ from .defaults import (
 
 from .utils import EW_PROMPT, DRAWHELPWIN
 from .notes import NOTE_DICT
+from .log_setup import GET_LOGGER
 
 DEFAULT_CTRL_CH = 1
 
@@ -59,7 +60,8 @@ class Slicer(portHolder):
         self.owner      = kwa.get('owner', 'SLICER')
 
         self.infile     = kwa.get('infile', None)
-        self.Log        = kwa.get('Log', None) or print
+        self.Log        = kwa.get('Log')
+        self.logger         = kwa.get('logger', GET_LOGGER(appname=self.devname))
         #self.stdscr     = stdscr
         ## this class may need to just slice, without stdscr
         self.stdscr     = kwa.get('stdscr', None) or curses.wrapper(CURSE_INIT)
@@ -158,11 +160,12 @@ class Slicer(portHolder):
                 return  
             elif _poll == 0:    ## good result
                 self.proc = None
-                self.Log(f"CmdQueueUpdate OK: {self.last_cmd}")
+                self.Log("CmdQueueUpdate OK", level='debug')
             else:
-                self.Log(f"CmdQueueUpdate ERR: {self.last_cmd}")
+                self.Log("CmdQueueUpdate ERROR")
                 pass            ## error state?
                 self.proc = None
+                self.Log(f"#\t{self.last_cmd}", level='error')
 
         if not self.proc:
             if len(self.CmdQueue) > 0:
@@ -173,9 +176,11 @@ class Slicer(portHolder):
                     stderr=subprocess.PIPE,
                     )
 
-                self.Log(f"CmdQueueUpdate START: {cmd}")
+                self.Log(f"CmdQueueUpdate START:", level='debug')
+                self.Log(f"#\t{cmd}", level='debug')
                 self.last_cmd = cmd
                 if len(self.CmdQueue) == 0:
+                    self.Log("CmdQueue complete!", level='debug')
                     self.Reload()
 
             
@@ -387,6 +392,7 @@ class Slicer(portHolder):
 
     def Reload(self):
         ## cant see this state, pyg loading blocks and when its done status is 'ready'
+        self.Log("{self.devname}.Reload()")
         self._state = self.STATES.LOADING
         self.sounds = dict()
         self.Draw()

@@ -4,7 +4,7 @@ import os
 
 import pygame
 from pygame.midi import midi_to_ansi_note
-from pygame.midi import midi_to_frequency
+#from pygame.midi import midi_to_frequency
 
 from .slicer_base import Slicer
 from .utils import DOFFMPEG, PYG_SOUND_LOAD
@@ -23,7 +23,8 @@ class PitchesSlicer(Slicer):
 
         self.note_range = range(69 - 36, 69 + 36)
 
-        self.Log        = kwa.get('Log', print)
+        self.Log("INIT")
+        #self.Log = kwa.get('Log')   ## this wasnt working when just put in base class
 
     @property
     def NoteMap(self):
@@ -78,6 +79,7 @@ class PitchesSlicer(Slicer):
                     self.infile, 
                     outfile=_outfile,
                     basenote_ix=self.basenote_ix,
+                    Log=self.Log,
                     ))
 
                 self.Log(f"Slice: Start {_name}")
