@@ -65,18 +65,18 @@ class wcSlot():
         self.slotnum    = kwa.get('slotnum', 0)
         self.slotname   = f"slot{self.slotnum:02d}"
         #self.stdscr     = kwa.get('stdscr', None)
-        self.Log        = kwa.get('Log')
-        self.logger         = kwa.get('logger', GET_LOGGER(appname=self.slotname))
-
+        self._Log        = kwa.get('Log')
+        #self.logger     = kwa.get('logger', GET_LOGGER(appname=self.slotname))
+        self.logger     = GET_LOGGER(appname=self.slotname)
         #self.logger     = kwa.get('logger', None)
-        self.debug      = kwa.get('debug', 0)
-        self.ctrl_ch    = kwa.get('ctrl_ch', self.ctrl_ch)
 
+        self.ctrl_ch    = kwa.get('ctrl_ch', self.ctrl_ch)
         self.selected   = False
         self.retrigger  = True
         self.lastproc   = None
         self.procs      = list()
 
+        #assert(self.logger)
 
         ## would we want 'get next filename' for Recording for example?
         self.out_path   = os.path.join(self.WAV_OUT_DIR, self.slotname)
@@ -106,6 +106,12 @@ class wcSlot():
             f"{self.shift_tempo:6.2f}",
             "/".join([("1" if os.path.isfile(y) else "0") for y in _files])
             ])
+
+
+    ## have to pass the 'logger' back for proper appname to show up
+    def Log(self, msg, **kwa):
+        kwa.update(dict(logger=self.logger))
+        self._Log(msg, **kwa)
 
 
     ## INFILE and infiles directory
@@ -456,17 +462,17 @@ class wcSlot():
 
 
             _Class = PitchesSlicer
-            self.Log(f"{_Class}")
+            self.Log(f"instantiating: {_Class}")
 
             self._PitchObj = _Class(
                 infile=_infile, 
                 bpm=self.bpm, 
                 shift_tempo=self.shift_tempo,
                 ctrl_ch=self.slotnum,
-                Log=self.Log,
+                Log=self._Log,
                 )
 
-            self.Log(f"{self._PitchObj}")
+            self.Log(f"instantiated: {self._PitchObj}")
 
 
     def SetupPitchObj(self):

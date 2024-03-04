@@ -79,7 +79,7 @@ class InfileGetter():
         self.uri            = kwa.get('uri', None)
         #self.stdscr         = kwa.get('stdscr', None)
 
-        self.Log            = kwa.get('Log', print)
+        self._Log           = kwa.get('Log')
         self.logger         = kwa.get('logger', GET_LOGGER(appname=self.__class__.__name__))
         self.errors         = []
         self.proc_start     = None
@@ -106,6 +106,11 @@ class InfileGetter():
 
     def __del__(self):
         self.proc = False
+
+
+    def Log(self, msg, **kwa):
+        kwa.update(dict(logger=self.logger))
+        self._Log(msg, **kwa)
 
     #def Log(self, msg, level='debug'):
     #    _func = getattr(self.logger, level, None) or self.logger.debug

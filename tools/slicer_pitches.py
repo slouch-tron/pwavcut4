@@ -82,7 +82,7 @@ class PitchesSlicer(Slicer):
                     Log=self.Log,
                     ))
 
-                self.Log(f"Slice: Start {_name}")
+                self.Log(f"add cmd to Slice to {_name}          ")
 
         return True
 

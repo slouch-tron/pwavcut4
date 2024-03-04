@@ -39,11 +39,7 @@ class slotHolder(portHolder):
     def __init__(self, stdscr, **kwa):
         self.id             = slotHolder.ID;    slotHolder.ID +=1
         self.devname        = f"{self.__class__.__name__}{self.id:02d}"
-        ## these + add 'appname' search to Log function
         self.logger         = GET_LOGGER(appname=self.devname)
-        self.logger_ffmpeg  = GET_LOGGER(appname='do_ffmpeg')
-        self.logger_getfile = GET_LOGGER(appname='Importer')
-        self.logger_slot    = GET_LOGGER(appname='WcSlot')
 
         self.slot_count     = kwa.get('slot_count', 8)
         self.slicer_count   = kwa.get('slicer_count', 4)
@@ -54,7 +50,7 @@ class slotHolder(portHolder):
                 slotnum=s, 
                 ctrl_ch=s, 
                 Log=self.Log, 
-                #logger=self.logger,
+                #logger=self.logger_slot,
                 ))
 
 
@@ -97,17 +93,6 @@ class slotHolder(portHolder):
 
         return self._log_lines
 
-    @property
-    def LogsDict(self):
-        if not hasattr(self, '_LogsDict'):
-            self._LogsDict = dict(
-                WcSlot=self.logger_slot,
-                ffmpeg=self.logger_ffmpeg,
-                Importer=self.logger_getfile,
-                )
-
-        return self._LogsDict
-
 
     def Log(self, msg, **kwa):
         ''' Pass this function to a class like wcSlot or InfileGetter.
@@ -116,15 +101,16 @@ class slotHolder(portHolder):
         level   = kwa.get('level', 'visual')
         also    = kwa.get('also', 1)
         appname = kwa.get('appname', None)
+        logger  = kwa.get('logger', self.logger)
 
 
         if level == 'visual':   
+            self.logWin and self.logWin.clear()
             self.log_lines.append(msg)
             if not also:    
                 return
 
-        _logger = self.LogsDict.get(appname, self.logger)
-        _func = getattr(_logger, level, None) or self.logger.debug
+        _func = getattr(logger, level, None) or self.logger.debug
         _func(msg)
 
     #def VisLog(self, msg, also=1):                  self.Log(msg, level='visual', also=also)

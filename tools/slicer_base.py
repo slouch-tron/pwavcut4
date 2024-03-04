@@ -61,8 +61,8 @@ class Slicer(portHolder):
         self.owner      = kwa.get('owner', self.devname)
 
         self.infile     = kwa.get('infile', None)
-        self.Log        = kwa.get('Log')
-        self.logger     = kwa.get('logger', GET_LOGGER(appname=self.devname))
+        self._Log       = kwa.get('Log')
+        self.logger     = GET_LOGGER(appname=self.devname)
         #self.stdscr     = stdscr
         ## this class may need to just slice, without stdscr
         self.stdscr     = kwa.get('stdscr', None) or curses.wrapper(CURSE_INIT)
@@ -111,6 +111,10 @@ class Slicer(portHolder):
             str(len(self.CmdQueue)),
             ]])
 
+
+    def Log(self, msg, **kwa):
+        kwa.update(dict(logger=self.logger))
+        self._Log(msg, **kwa)
 
     @property
     def state(self):
@@ -161,7 +165,8 @@ class Slicer(portHolder):
                 return  
             elif _poll == 0:    ## good result
                 self.proc = None
-                self.Log("CmdQueueUpdate OK", level='debug')
+                #self.Log("CmdQueueUpdate OK", level='debug')
+                #self.Log("CmdQueueUpdate OK")
             else:
                 self.Log("CmdQueueUpdate ERROR")
                 pass            ## error state?
@@ -177,8 +182,8 @@ class Slicer(portHolder):
                     stderr=subprocess.PIPE,
                     )
 
-                self.Log(f"CmdQueueUpdate START:", level='debug')
-                self.Log(f"#\t{cmd}", level='debug')
+                self.Log(f"CmdQueue START, {len(self.CmdQueue)} cmds waiting", level='debug')
+                #self.Log(f"#SLICER BASE#\t{cmd}", level='debug')
                 self.last_cmd = cmd
                 if len(self.CmdQueue) == 0:
                     self.Log("CmdQueue complete!", level='debug')

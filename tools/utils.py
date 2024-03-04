@@ -8,11 +8,14 @@ from pygame.midi import midi_to_ansi_note
 #from pygame.midi import midi_to_frequency
 
 from pydub import AudioSegment
+from typing import Iterator
 
 from .defaults import DEFAULT_WAV_IN_DIR, DEFAULT_SRC_OUT_DIR
 from .notes import midi_to_frequency2 as midi_to_frequency
 from .log_setup import GET_LOGGER
 
+UTILS_LOGGER    = GET_LOGGER(appname="utils")
+DOFFMPEG_LOGGER = GET_LOGGER(appname="DoFFMPEG")
 
 ## where to keep this, if we phase 'utils' out.  defaults?
 ## A: maybe here is fine, happy medium where all files converted same way but also,
@@ -179,14 +182,10 @@ def DOFFMPEG(
     ):
 
     def _Log(txt, level='debug'):
-        Log and Log("DDD" + txt, level=level)
-        logger.debug(txt)
-        curses.endwin()
-        print(dir(logger))
-        input()
+        DOFFMPEG_LOGGER.debug(txt)
 
     ## maybe keep named loggers in the main class?
-    logger = GET_LOGGER(appname="doffmpeg")
+    #logger = GET_LOGGER(appname="doffmpeg")
 
     nkey = midi_to_ansi_note(pitch_ix)
     if not outfile:
@@ -239,8 +238,8 @@ def DOFFMPEG(
                     )
 
         _freq = midi_to_frequency(pitch_ix)
-        _Log(f"midi_to_frequency({pitch_ix}) = {_freq}", level='debug')
-        _Log(f"\033[33m{cmd}\033[0m", level='debug')
+        #_Log(f"midi_to_frequency({pitch_ix}) = {_freq}", level='debug')
+        _Log(f"{cmd}", level='debug')
 
         return cmd
 
@@ -277,3 +276,15 @@ def DRAWHELPWIN(obj, dict_name='keyDict'):
     while ik < 1:
         ik = obj.stdscr.getch()
 
+
+''' ## like to 'tail a file' for log window, but doesnt work...
+def TAIL(filename):
+    line = ''
+    while True:
+        tmp = file.readline()
+        if tmp is not None and tmp != "":
+            line += tmp
+            if line.endswith("\n"):
+                yield line
+                line = ''
+'''
