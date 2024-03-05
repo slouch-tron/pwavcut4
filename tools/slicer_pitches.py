@@ -1,4 +1,5 @@
 #!/bin/env python3
+import time
 
 import os
 
@@ -62,8 +63,17 @@ class PitchesSlicer(Slicer):
             if len(self.CmdQueue) > 0:  ## already running dont requeue the same cmds
                 return
 
+        #if self.proc:   ## running last cmd though cmdqueue is empty
+        #    return
+
+        ## A4 = note 69, note 24 is lowest ABS goes.  36 seems to be the sweet spot.  old was 24
+        #for f in range(-48, 49):
         for f in range(-24, 25):
+        #for f in range(-36, 37):
             _nix  = self.basenote_ix + f
+            if _nix < 0:
+                continue 
+
             _nkey = midi_to_ansi_note(_nix)
             _name = f"note_{_nix:03d}_{_nkey}"
             _name += ".wav" if self.bpm == self.shift_tempo else "_mod.wav"
@@ -71,6 +81,7 @@ class PitchesSlicer(Slicer):
             _outfile = os.path.join(_path, _name)
             if _only_reload:
                 if os.path.isfile(_outfile):
+                    #try:
                     _sound = pygame.mixer.Sound(_outfile)
                     self.sounds.update({ _nix : _sound})
             else:

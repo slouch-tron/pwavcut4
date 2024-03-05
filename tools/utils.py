@@ -219,6 +219,10 @@ def DOFFMPEG(
         else:
             tempo_str = "atempo={:.4f},".format(shift_tempo) + tempo_str
 
+        ## not sure where we miss a comma but it does!
+        ##  -af asetrate=44100*209300/44000,atempo=1.0000,atempo=0.84089823,atempo=1/2atempo=1/2
+        while 'atempo=1/2atempo=1/2' in tempo_str:
+            tempo_str = tempo_str.replace('atempo=1/2atempo=1/2', 'atempo=1/2,atempo=1/2')
 
         if tempo_factor < 1:
             cmd = cmd_head + " -af asetrate={}*{}/{},{} {}".format(

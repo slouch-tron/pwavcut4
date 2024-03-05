@@ -13,6 +13,7 @@ from .utils import INFILE_CONVERT_CMD_FMT
 from .defaults import DEFAULT_WAV_IN_DIR, CFG_PATH, pr_debug, DEBUG
 from .log_setup import GET_LOGGER
 from .cfg_setup import CFGSAVE, CFGLOAD
+from .enums import IGStates as States, IGCopyModes as CopyModes
 
 #RECOPY      = int(os.environ.get('RECOPY', 1))
 #RECONVERT   = int(os.environ.get('RECONVERT', 1))
@@ -21,7 +22,7 @@ DEFAULT_DEST_DIR    = "/tmp/wav_in/"
 DEFAULT_CONVERT_DIR = "/tmp/wav_convert/"
 
 
-class States(Enum):
+class States2(Enum):
     INIT        = auto()    ## maybe theres 'uri', could be link or filename
     COPY        = auto()    ## copy working (wget, local FS copy), save to copy_target
     CONVERT     = auto()    ## convert working, ffmpeg convert copy_target to convert_target
@@ -29,20 +30,12 @@ class States(Enum):
     ERROR       = auto()    ## check self.errors
     CANCEL      = auto()    ## was cancelled
 
-class CopyModes(Enum):
+class CopyModes2(Enum):
     YTDL    = auto()
     SCP     = auto()
     FILE    = auto()
     HTTP    = auto()
 
-STATECOLORS = dict(
-    INIT    = 28,
-    COPY    = 190,
-    CONVERT = 190,
-    READY   = 40,
-    ERROR   = 124,
-    CANCEL  = 186,
-    )
 
 BLINKCOLORS = [56, 66, 76, 86]
 BLINKCOLORS = [232, 238, 244, 250, 255, 231, 230, 229, 228, 227, 226, 225, 232, 232, 232, 232]
@@ -267,7 +260,6 @@ class InfileGetter():
     def pr_poll(self):
         if not self.proc:
             return 
-        
 
         p = self.proc
         _recent_output = False
@@ -282,7 +274,6 @@ class InfileGetter():
                 continue
             print(f"\033[33;2m{line}\033[0m", end="")
             _recent_output = True
-
 
     #######################################################################
 
@@ -382,7 +373,6 @@ class InfileGetter():
     def InfoWin(self, coords):
         _coords = coords if coords != None else self.COORDS_INFO
         self._InfoWin = curses.newwin(*_coords)
-        #self._InfoWin.keypad(1)
             
 
     @property
@@ -414,14 +404,14 @@ class InfileGetter():
             _bcol = curses.color_pair(_bix)
             _attr2 = curses.color_pair(_bix)
         else:
-            _col = STATECOLORS.get(self.state.name, None)
+            #_col = STATECOLORS.get(self.state.name, None)
+            _col = self.state.color
             if _col:
                 _attr2 = curses.color_pair(_col)
 
         self.InfoWin.addstr(0, 0, self.__class__.__name__, _attr)
         self.InfoWin.addstr(1, 0, "state:    ", _attr)
         #self.InfoWin.addstr(1, 0, "state:                ", _attr)
-        self.InfoWin.addstr(1, 10, self.state.name + "  ", _attr2)
         self.InfoWin.addstr(1, 10, self.state.name + "  ", _attr2)
         _yy = 2
 
@@ -471,8 +461,6 @@ class InfileGetter():
 
         return True
 
-
-    #def Initiate(self):
 
     def prompt_for_filename(self):
         def _print(txt):
@@ -544,17 +532,6 @@ class InfileGetter():
     def CfgSave(self):  CFGSAVE(self, self.devname)
     def CfgLoad(self):  CFGLOAD(self, self.devname)
 
-    '''
-    @property
-    def uri(self):
-        if not hasattr(self, '_uri'):
-            self._uri = None
-        return self._uri
-
-    @uri.setter
-    def uri(self, val):
-        self._uri = val
-    '''
 
     def CfgSave2(self):
         PREV = dict()

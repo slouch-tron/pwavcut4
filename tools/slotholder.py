@@ -6,6 +6,7 @@ import curses
 import argparse
 import time
 import pygame
+from enum import Enum, auto
 
 from .wcslot import wcSlot
 from .portholder import portHolder
@@ -16,15 +17,15 @@ from .defaults import (
         CURSE_INIT, 
         )
 
-
-
 from .utils import EW_PROMPT, DRAWHELPWIN
 from .draw_slots_class import DrawSlotsClass
 from .log_setup import GET_LOGGER
+#from .enums import FocusStates, EditFields
 
 
 class slotHolder(portHolder):
     EDITFIELDS  = ['pos0', 'pos1', 'infile']
+    FOCUSSTATES = ['MAIN', 'SLICER']
     RESOLUTIONS = [1.0, 0.1, 0.01]
     COORDS_MAIN = (20, 100, 3, 1)
     COORDS_INFO = (20, 48, 22, 1)
@@ -41,10 +42,17 @@ class slotHolder(portHolder):
         self.devname        = f"{self.__class__.__name__}{self.id:02d}"
         self.logger         = GET_LOGGER(appname=self.devname)
 
+        self.selected_ix    = 0
+        self.field_ix       = 0
+        self.resolution_ix  = 0
+        self.focus_ix       = 0
+
+        self.slots      = []
+        self.slicers    = []
+
         self.slot_count     = kwa.get('slot_count', 8)
         self.slicer_count   = kwa.get('slicer_count', 4)
 
-        self.slots = []
         for s in range(self.slot_count):
             self.slots.append(wcSlot(
                 slotnum=s, 
@@ -52,9 +60,6 @@ class slotHolder(portHolder):
                 Log=self.Log, 
                 #logger=self.logger_slot,
                 ))
-
-
-        self.slicers = []
 
         ## 240229 - curse.wrapper(main), initscr, then make SlotHolder and Run
         ##  otherwise arrow keys might not work
@@ -64,8 +69,7 @@ class slotHolder(portHolder):
         self.last_msg_i = None
         self.last_msg_c = None
         self.last_msgs  = []
-        self.cyc_ct = 0
-
+        self.cyc_ct     = 0
 
 
     def __str__(self):
@@ -76,7 +80,9 @@ class slotHolder(portHolder):
             yy, xx = self.mainWin.getmaxyx()
 
         return " | ".join([
-            f"SLOT {self.selected_ix:>2d}/{self.slot_count:02d}",
+            #f"SLOT {self.selected_ix:>2d}/{self.slot_count:02d}",
+            #f"FOCUS {self.focus.name:6}",
+            f"FOCUS {self.focus:6}",
             f"FIELD {self.field:6}",
             f"RES {self.resolution:4.2f}",
             f"{self.last_func:^20s}",
@@ -106,7 +112,13 @@ class slotHolder(portHolder):
 
         if level == 'visual':   
             self.logWin and self.logWin.clear()
-            self.log_lines.append(msg)
+            _ww = 80
+            if len(msg) < _ww:
+                self.log_lines.append(msg)
+            else:
+                for f in [msg[i:i+_ww] for i in range(0, len(msg), _ww)]:
+                    self.log_lines.append(f)
+
             if not also:    
                 return
 
@@ -137,46 +149,72 @@ class slotHolder(portHolder):
     def resolution(self):
         return self.RESOLUTIONS[self.resolution_ix]
 
+    ## might do this one as an Enum?
+    ## later: maybe not, convenient to index this way
     @property
     def field(self):
         return self.EDITFIELDS[self.field_ix]
 
     @property
-    def selected_ix(self):
-        if not hasattr(self, '_selected_ix'):
-            self._selected_ix = 0
+    def focus(self):
+        return self.FOCUSSTATES[self.focus_ix]
 
-        return self._selected_ix
+    ## is this tormenting the concept of properties, or enums?
+    '''
+    @property
+    def focus(self):
+        if not hasattr(self, '_focus'):
+            self._focus = self.FOCUSSTATES(0)
 
-    @selected_ix.setter
-    def selected_ix(self, val):
-        self._selected_ix = val % len(self.slots)
+        return self._focus
 
     @property
-    def resolution_ix(self):
-        if not hasattr(self, '_resolution_ix'):
-            self._resolution_ix = 0
+    def focus_ix(self):
+        return self.focus.value
 
-        return self._resolution_ix
+    @focus_ix.setter
+    def focus_ix(self, val):
+        if isinstance(val, int):     
+            self._focus = self.FOCUSSTATES(val % len(self.FOCUSSTATES))
+    '''
+    ## pondering if we can do this without get/set functions taking up so much space.
+    ##  the script is going to get signals to change class internal properties..
+    ## fun to use Enums but now we want to conveniently index them.  they seem good for
+    ##  bringing attrs like 'color' with a state.  but then why not just use dictionaries?
+    def set_selected_ix(self, val):     self.selected_ix = val % len(self.slots)
+    def inc_selected_ix(self):          self.set_selected_ix(self.selected_ix + 1)
+    def dec_selected_ix(self):          self.set_selected_ix(self.selected_ix - 1)
+    def set_resolution_ix(self, val):   self.resolution_ix = val % len(self.RESOLUTIONS)
+    def inc_resolution_ix(self):        self.set_resolution_ix(self.resolution_ix + 1)
+    def dec_resolution_ix(self):        self.set_resolution_ix(self.resolution_ix - 1)
+    def set_field_ix(self, val):        self.field_ix = val % len(self.EDITFIELDS)
+    def inc_field_ix(self):             self.set_field_ix(self.field_ix + 1)
+    def dec_field_ix(self):             self.set_field_ix(self.field_ix - 1)
+    def set_focus_ix(self, val):        self.focus_ix = val % len(self.FOCUSSTATES)
+    def inc_focus_ix(self):             self.set_focus_ix(self.focus_ix+1)
+    def dec_focus_ix(self):             self.set_focus_ix(self.focus_ix-1)
 
-    @resolution_ix.setter
-    def resolution_ix(self, val):
-        self._resolution_ix = val % len(self.RESOLUTIONS)
-
-    @property
-    def field_ix(self):
-        if not hasattr(self, '_field_ix'):
-            self._field_ix = 0
-
-        return self._field_ix
-
-    @field_ix.setter
-    def field_ix(self, val):
-        self._field_ix = val % len(self.EDITFIELDS)
 
     ## windows
     #############################################################
     #############################################################
+
+    ## better keep these as properties for now, sharing logging between classes messes w/ this
+    ## OR did i just declare it After the other things using it were instantiated..
+    ''' 
+    def _setupMainWin(self, coords):
+        _coords = coords if coords != None else self.COORDS_MAIN
+        self.mainWin = curses.newwin(*_coords)
+
+    def _setupLogWin(self, coords):
+        _coords = coords if coords != None else self.COORDS_LOG
+        self.logWin = curses.newwin(*_coords)
+
+    def _setupInfoWin(self, coords):
+        _coords = coords if coords != None else self.COORDS_INFO
+        self.infoWin = curses.newwin(*_coords)
+
+    '''
     @property
     def mainWin(self):
         if not hasattr(self, '_mainWin'):
@@ -188,7 +226,6 @@ class slotHolder(portHolder):
     def mainWin(self, coords):
         _coords = coords if coords != None else self.COORDS_MAIN
         self._mainWin = curses.newwin(*_coords)
-        #self._mainWin.keypad(1)
             
     @property
     def logWin(self):
@@ -201,7 +238,6 @@ class slotHolder(portHolder):
     def logWin(self, coords):
         _coords = coords if coords != None else self.COORDS_LOG
         self._logWin = curses.newwin(*_coords)
-        #self._logWin.keypad(1)
             
     @property
     def infoWin(self):
@@ -214,18 +250,7 @@ class slotHolder(portHolder):
     def infoWin(self, coords):
         _coords = coords if coords != None else self.COORDS_INFO
         self._infoWin = curses.newwin(*_coords)
-        #self._infoWin.keypad(1)
-            
     
-    ## seems to be the thing to do: use setters internally, provide public functions externally
-    def inc_selected_ix(self):      self.selected_ix += 1
-    def dec_selected_ix(self):      self.selected_ix -= 1
-    def inc_resolution_ix(self):    self.resolution_ix += 1
-    def dec_resolution_ix(self):    self.resolution_ix -= 1
-    def inc_field_ix(self):         self.field_ix += 1
-    def dec_field_ix(self):         self.field_ix -= 1
-
-
     ## Slot functions
     ############################################################################
     def DoCutOut(self, mod=False):
@@ -328,7 +353,6 @@ class slotHolder(portHolder):
         if self.Importer:
             self.Importer.prompt_for_filename()
 
-
     ############################################################################
     ############################################################################
 
@@ -413,7 +437,6 @@ class slotHolder(portHolder):
     def CfgDict(self):
         return dict()
 
-
     ############################################################################
     ############################################################################
     @property
@@ -448,6 +471,8 @@ class slotHolder(portHolder):
                 'H' : self.DrawHelpWin,
                 260 : self.dec_selected_ix,
                 261 : self.inc_selected_ix,
+                'u' : self.dec_focus_ix,
+                'U' : self.inc_focus_ix,
                 }
 
         self._keyDict.update({
@@ -484,7 +509,6 @@ class slotHolder(portHolder):
             self.last_func = _func.__name__
             _func()
             return True
-
 
     ############################################################################
     ############################################################################
@@ -554,7 +578,6 @@ class slotHolder(portHolder):
                 _slot = self.slots[msg.channel]
                 if _slot.PitchObj:
                     _slot.PitchObj.msgCheck(msg)
-
 
 ############################################################################
 ############################################################################

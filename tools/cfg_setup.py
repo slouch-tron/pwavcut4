@@ -10,9 +10,12 @@ import curses
 ## passes in 'cfgname' since some things are 'slot' some are 'device'
 
 
-def CFGSAVE(self, cfgname, cfgdict=None):
+def CFGSAVE(self, cfgname, cfgdict=None, no_trim=False):
     curses.endwin()
-    _data = _cfg_dict_trim((cfgdict if cfgdict else self.CfgDict), self.DEFAULT_CFG)
+    if no_trim:     
+        _data = self.CfgDict
+    else:
+        _data = _cfg_dict_trim((cfgdict if cfgdict else self.CfgDict), self.DEFAULT_CFG)
 
     DATA = dict()
     if os.path.isfile(self.cfg_filename):
