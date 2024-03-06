@@ -176,6 +176,7 @@ class Slicer(portHolder):
         if not self.proc:
             if len(self.CmdQueue) > 0:
                 cmd = self.CmdQueue.pop(0)
+                os.system(f'echo "{cmd}"  >> /tmp/file2.log')
                 self.proc = subprocess.Popen(
                     shlex.split(cmd),
                     stdout=subprocess.PIPE,
@@ -246,7 +247,7 @@ class Slicer(portHolder):
             self.last_func,
             ]])
 
-        _line2 = f"cmdqueue={len(self.CmdQueue)}"
+        _line2 = f"cmdqueue={len(self.CmdQueue)}    "
 
         for ix, line in enumerate([
             _line0, _line1, _line2,

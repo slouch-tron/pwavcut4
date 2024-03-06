@@ -309,28 +309,23 @@ class slotHolder(portHolder):
 
     def SetSlotBpm(self):
         value = EW_PROMPT(f"enter BPM (float:{self.selectedSlot.bpm:6.2f}): ")
-        if value:
-            self.selectedSlot.bpm = value
+        if value:            self.selectedSlot.bpm = value
 
     def SetSlotShift(self):
         value = EW_PROMPT(f"enter SHIFT TEMPO (float:{self.selectedSlot.shift_tempo:6.2f}): ")
-        if value:
-            self.selectedSlot.shift_tempo = value
+        if value:            self.selectedSlot.shift_tempo = value
 
     def SetSlotPos0(self):
         value = EW_PROMPT(f"enter POS0 (float:{self.selectedSlot.pos0:6.2f}): ")
-        if value:
-            self.selectedSlot.pos0 = value
+        if value:            self.selectedSlot.pos0 = value
 
     def SetSlotPos1(self):
         value = EW_PROMPT(f"enter POS1 (float:{self.selectedSlot.pos1:6.2f}): ")
-        if value:
-            self.selectedSlot.pos1 = value
+        if value:            self.selectedSlot.pos1 = value
 
     def SetSlotLockLength(self):
         value = EW_PROMPT(f"enter LOCK LENGTH (float:{self.selectedSlot.lock_length:6.2f}): ")
-        if value:
-            self.selectedSlot.lock_length = value
+        if value:            self.selectedSlot.lock_length = value
 
     ## Importer
     ############################################################################
@@ -394,8 +389,17 @@ class slotHolder(portHolder):
 
         if self.selectedSlot.PitchObj:
             self.selectedSlot.PitchObj.Draw()
-            ## needs an Update function for non-draw updates, like running process
             self.selectedSlot.PitchObj.CmdQueueUpdate()
+
+        if 0:   ## trying to make 'continuous but nonblocking processing', just do next thing.
+                ## its not great though.  maybe w better signals.
+            for f in range(len(self.slots)):
+                _slot = self.slots[(f + self.selected_ix) % len(self.slots)]
+                if _slot.PitchObj:
+                    if _slot.PitchObj.state == _slot.PitchObj.STATES.SLICING:
+                        _slot.PitchObj.CmdQueueUpdate()
+                        break
+
 
         self.stdscr.refresh()
         self.mainWin.refresh()

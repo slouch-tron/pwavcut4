@@ -72,7 +72,7 @@ class InfileGetter():
         self.uri            = kwa.get('uri', None)
         #self.stdscr         = kwa.get('stdscr', None)
 
-        self._Log           = kwa.get('Log')
+        self._Log           = kwa.get('Log', None)
         self.logger         = kwa.get('logger', GET_LOGGER(appname=self.__class__.__name__))
         self.errors         = []
         self.proc_start     = None
@@ -103,7 +103,10 @@ class InfileGetter():
 
     def Log(self, msg, **kwa):
         kwa.update(dict(logger=self.logger))
-        self._Log(msg, **kwa)
+        if self._Log:
+            self._Log(msg, **kwa)
+        else:
+            self.logger.debug(msg)
 
     #def Log(self, msg, level='debug'):
     #    _func = getattr(self.logger, level, None) or self.logger.debug
@@ -297,11 +300,11 @@ class InfileGetter():
 
             _dest = self.copy_target
             _cmd = {
-                self.MODES.SCP  : f"scp {self.uri} {_dest}",
-                self.MODES.FILE : f"cp {self.uri} {_dest}",
+                self.MODES.SCP  : f'scp "{self.uri}" {_dest}"',
+                self.MODES.FILE : f'cp "{self.uri}" "{_dest}"',
                 #self.MODES.YTDL : f"youtube-dl {self.uri} -x --audio-format wav -o {_dest}",
-                self.MODES.YTDL : f"{_YTDL} {self.uri} -x --audio-format wav -o {_dest}",
-                self.MODES.HTTP : f"wget -O {_dest} {self.uri}",
+                self.MODES.YTDL : f'{_YTDL} "{self.uri}" -x --audio-format wav -o "{_dest}"',
+                self.MODES.HTTP : f'wget -O "{_dest}" "{self.uri}"',
                 }.get(mode, None)
 
             if _cmd:

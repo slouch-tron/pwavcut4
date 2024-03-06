@@ -9,12 +9,15 @@ from pygame.midi import midi_to_ansi_note
 
 from .slicer_base import Slicer
 from .utils import DOFFMPEG, PYG_SOUND_LOAD
+from .defaults import DEFAULT_SRC_OUT_DIR
 
 ########################################################################################
 ########################################################################################
 	
 
 class PitchesSlicer(Slicer):
+    SRC_OUT_DIR = DEFAULT_SRC_OUT_DIR
+
     def __init__(self, *args, **kwa):
         super().__init__(*args, **kwa)
         self.basenote = kwa.get('basenote', 'A4')
@@ -113,6 +116,38 @@ class PitchesSlicer(Slicer):
         else:
             super().msgCheck(msg)
 
+
+    @staticmethod
+    def minislicer(src, bpm_ratio=1, base_note=69, owner='PitchSlicer00', nrange=36):
+        _outpath = os.path.join(PitchesSlicer.SRC_OUT_DIR, owner)
+        not os.path.isdir(_outpath) and os.system(f"mkdir -p {_outpath}")
+        if not os.path.isfile(src):
+            print(f"no file '{src}'", file=sys.stderr)
+            return
+
+        cmds = []
+        for f in range(-nrange, nrange+1):
+
+            _nix = base_note + f            ## 69 is note 'A4'
+            if _nix < 0 or _nix > 118:      ## note 118 is where DOFFMPEG starts breakin down
+                #print(f"\033[33m   nix={_nix}\033[0m")
+                continue
+
+            _nkey = midi_to_ansi_note(_nix)
+            _name = f"note_{_nix:03d}_{_nkey}"
+            _name += ".wav" if bpm_ratio == 1 else "_mod.wav"
+
+            _outfile = os.path.join(_outpath, _name)
+            cmds.append(DOFFMPEG(
+                _nix,
+                src,
+                outfile=_outfile,
+                basenote_ix=base_note,
+                ))
+
+        return cmds
+
+            
 
 
 

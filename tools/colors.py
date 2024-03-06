@@ -103,11 +103,40 @@ def terminal_test(blist=BLINKCOLORS, ftime=1/16):
         return
     
 
+def CUBE_EDGE(ix=21, axis=0):
+    print([vvv for vvv in 'xyz'][axis].upper() * 3)
 
+    _list = []
+    for f in range(5):
+        if axis == 0:       cix = f + ix
+        elif axis == 1:     cix = (f * 36) + ix
+        elif axis == 2:     cix = (f * 6) + ix
+
+        cix %= 256
+        _list.append(cix)
+
+    return _list
+        
+
+def color_cube_test(IX=21):
+    _cfmt = "\033[48;5;" + "{}m" + ("#"*16) + " {:03d}" + "\033[0m" 
+    _cfmt = "\033[38;5;" + "{}m" + ("#"*16) + " {:03d}" + "\033[0m" 
+
+    for g in range(3):
+        _list = CUBE_EDGE(ix=IX, axis=g)
+        for f in _list:
+            print(_cfmt.format(f, f))
+            
+        _rlist = [x for x in _list]
+        _rlist.reverse()
+        print(_list)
+        print(_rlist)
+        terminal_test(blist=(_list+_rlist))
 
 
 if __name__ == '__main__':
-    terminal_test()
+    #terminal_test()
+    color_cube_test(int(os.environ.get('IX', 21)))
     exit()
 
 
