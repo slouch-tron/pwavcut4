@@ -2,7 +2,6 @@
 
 import os
 import sys
-assert(sys.version_info.major == 3)
 import argparse
 import datetime	## timedelta stuff with ffmpeg
 import pygame

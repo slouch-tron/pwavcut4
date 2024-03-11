@@ -1,6 +1,7 @@
 #!/bin/env python3
 import os
 import sys
+assert(sys.version_info.major == 3)
 import curses
 import platform
 import yaml
@@ -14,6 +15,7 @@ DIR_BASE = "/tmp"
 DEFAULT_WAV_IN_DIR  = os.path.join(DIR_BASE, 'wav_in')
 DEFAULT_WAV_OUT_DIR = os.path.join(DIR_BASE, 'wav_out')
 DEFAULT_SRC_OUT_DIR = os.path.join(DIR_BASE, 'source_out')
+DEFAULT_CONVERT_DIR = os.path.join(DIR_BASE, 'wav_convert')
 
 CFG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../cfg'))
 LOG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../log'))

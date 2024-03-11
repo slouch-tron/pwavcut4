@@ -10,7 +10,7 @@ from pygame.midi import midi_to_ansi_note
 from pydub import AudioSegment
 from typing import Iterator
 
-from .defaults import DEFAULT_WAV_IN_DIR, DEFAULT_SRC_OUT_DIR
+from .defaults import DEFAULT_WAV_IN_DIR, DEFAULT_SRC_OUT_DIR, DEFAULT_CONVERT_DIR
 from .notes import midi_to_frequency2 as midi_to_frequency
 from .log_setup import GET_LOGGER
 
@@ -37,7 +37,13 @@ def PYG_SOUND_LOAD(filename):
         return _sound
 
 def NORMALIZE(filename, outfile="/tmp/norm1.wav"):
-    if filename and os.path.isfile(filename):
+    if os.path.isfile(filename):
+        if filename == outfile:
+            _tmpfile = os.path.join(DEFAULT_CONVERT_DIR, "_normalize_tmp.wav")
+            os.system(f"cp {filename} {_tmpfile}")
+            filename = _tmpfile
+
+
         seg = AudioSegment.from_wav(filename)
         norm = seg.normalize()
         norm.export(outfile)

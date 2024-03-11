@@ -10,7 +10,7 @@ import yaml
 
 from enum import Enum, auto
 from .utils import INFILE_CONVERT_CMD_FMT   
-from .defaults import DEFAULT_WAV_IN_DIR, CFG_PATH, pr_debug, DEBUG
+from .defaults import DEFAULT_WAV_IN_DIR, CFG_PATH, pr_debug, DEBUG, DEFAULT_CONVERT_DIR
 from .log_setup import GET_LOGGER, TOCONSOLE
 from .cfg_setup import CFGSAVE, CFGLOAD
 from .enums import IGStates as States, IGCopyModes as CopyModes
@@ -18,8 +18,7 @@ from .enums import IGStates as States, IGCopyModes as CopyModes
 #RECOPY      = int(os.environ.get('RECOPY', 1))
 #RECONVERT   = int(os.environ.get('RECONVERT', 1))
 
-DEFAULT_DEST_DIR    = "/tmp/wav_in/"
-DEFAULT_CONVERT_DIR = "/tmp/wav_convert/"
+DEFAULT_DEST_DIR    = DEFAULT_WAV_IN_DIR
 
 
 class States2(Enum):
@@ -321,7 +320,7 @@ class InfileGetter():
 
             _dest = self.copy_target
             _cmd = {
-                self.MODES.SCP  : f'scp "{self.uri}" {_dest}"',
+                self.MODES.SCP  : f'scp "{self.uri}" "{_dest}"',
                 self.MODES.FILE : f'cp "{self.uri}" "{_dest}"',
                 #self.MODES.YTDL : f"youtube-dl {self.uri} -x --audio-format wav -o {_dest}",
                 self.MODES.YTDL : f'{_YTDL} "{self.uri}" -x --audio-format wav -o "{_dest}"',

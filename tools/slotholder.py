@@ -379,6 +379,8 @@ class slotHolder(portHolder):
         _chs = [self.MIDI_CH_CTL, self.MIDI_CH_MOD, self.MIDI_CH_KIT]
         self.stdscr.addstr(1, 40, str(_chs))
 
+        self.DrawPortsWin()
+
         self.DrawSlots()
         self.DrawLogWin()
         self.DrawInfoWin()

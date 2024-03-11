@@ -5,11 +5,13 @@ import sys
 import re
 import mido
 import argparse
+import curses
 
 DEBUG = int(os.environ.get('DEBUG', 0))
 
 
 class portHolder():
+    COORDS_PORTWIN = (2, 80, 2, 1)
 
     @property
     def port_i(self):
@@ -183,9 +185,6 @@ class portHolder():
             self.msgs_f,
             ]])
 
-
-
-
     ############################################################################
     ############################################################################
     ## call from main/run function
@@ -211,6 +210,21 @@ class portHolder():
         return args
 
 
+    ## what if we did put the curses window here for this
+    def DrawPortsWin(self, coords=None):
+        if not hasattr(self, '_portsWin'):
+            self._portsWin = None
+
+        if not self._portsWin or coords != None:
+            self._portsWin = curses.newwin(*(coords if coords else self.COORDS_PORTWIN))
+
+        ostr = "ICOF: "
+        for f in [self.port_i, self.port_c, self.port_o, self.port_f]:
+            ostr += " {:6s}".format(f.name.split(' ')[-1] if f else '-')
+
+        self._portsWin.addstr(0, 0, ostr, curses.color_pair(28))
+        self._portsWin.refresh()
+            
 
 #### cant reach these like properties in the subclasses of this..
 '''
@@ -226,7 +240,6 @@ class portHolder2222():
     def set_port_o(self, hint): self.port_i = GET_PORT(hint, iotype=1)
     def set_port_f(self, hint): self.port_i = GET_PORT(hint, iotype=1)
 '''
-
 
 
 def dbprint(txt):
