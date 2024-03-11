@@ -1,10 +1,11 @@
 #!/bin/env
 
-#import os
+import os
 #import sys
 import time
 
 from tools import InfileGetter
+TOCONSOLE = int(os.environ.get('TOCONSOLE', 0))
 
 
 def main_test():
@@ -15,7 +16,7 @@ def main_test():
 
     try:
         while True:
-            print(iii)
+            TOCONSOLE or print(iii)
             iii.Update()
             time.sleep(0.1)
             if iii.state in [iii.STATES.READY, iii.STATES.ERROR, iii.STATES.CANCEL]:

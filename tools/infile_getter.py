@@ -11,7 +11,7 @@ import yaml
 from enum import Enum, auto
 from .utils import INFILE_CONVERT_CMD_FMT   
 from .defaults import DEFAULT_WAV_IN_DIR, CFG_PATH, pr_debug, DEBUG
-from .log_setup import GET_LOGGER
+from .log_setup import GET_LOGGER, TOCONSOLE
 from .cfg_setup import CFGSAVE, CFGLOAD
 from .enums import IGStates as States, IGCopyModes as CopyModes
 
@@ -157,6 +157,8 @@ class InfileGetter():
             #self.proc = False
             return 
 
+        TOCONSOLE and self.pr_poll()
+
         if self.state in [self.STATES.COPY, self.STATES.CONVERT]:
             _poll = self.proc.poll()
             if _poll == None:   ## still running
@@ -242,10 +244,15 @@ class InfileGetter():
         else:
 
             self.last_cmd = cmd
+            print(f"\033[35m{cmd}\033[0m", file=sys.stderr)
+
             self._proc = subprocess.Popen(
                 shlex.split(cmd),
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                #stderr=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                bufsize=1,
+                universal_newlines=True,
                 )
             
             self.proc_start = time.time()
@@ -265,18 +272,30 @@ class InfileGetter():
             return 
 
         p = self.proc
+
         _recent_output = False
-        for line in list(iter(p.stdout.readline, "")):
+        ix = 0
+        for line in iter(p.stdout.readline, ""):
+        #for line in iter(p.stderr.readline, ""):
+            if ix < 0:
+                break
+
+            if '\n' in line: 
+                ix -= 1
+
             if line == b'':
                 continue
-            print(f"\033[36;1m{line}\033[0m", end="")
-            _recent_output = True
 
+            print(f"\033[36;1m{line}\033[0m", end="")
+
+
+        '''
         for line in iter(p.stderr.readline, ""):
             if line == b'':
                 continue
             print(f"\033[33;2m{line}\033[0m", end="")
             _recent_output = True
+        '''
 
     #######################################################################
 
