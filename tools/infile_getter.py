@@ -157,7 +157,6 @@ class InfileGetter():
             #self.proc = False
             return 
 
-        TOCONSOLE and self.pr_poll()
 
         if self.state in [self.STATES.COPY, self.STATES.CONVERT]:
             _poll = self.proc.poll()
@@ -287,6 +286,9 @@ class InfileGetter():
                 continue
 
             print(f"\033[36;1m{line}\033[0m", end="")
+            return
+
+        print(self)
 
 
         '''
@@ -471,6 +473,12 @@ class InfileGetter():
 
 
     def as_cli(self):
+        print(f"\033[33mENV:\033[0m")
+        for ev in ['RECOPY', 'RECONVERT', 'TOCONSOLE', 'DEBUG']:
+            _val = os.environ.get(ev, 'None')
+            if _val != None and _val != 'None':
+                print(f"\033[33m{ev} = {_val}\033[0m")
+
         args = self.parse_argv(sys.argv)
         
         if   args.file:         self.uri = args.file;   self.Copy_FILE()
@@ -481,7 +489,28 @@ class InfileGetter():
             print("\033[34m use '-h' to see options\033[0m", file=sys.stderr)
             return
 
-        return True
+        try:
+
+            while True:
+                _old = self.state
+                self.Update()
+                if TOCONSOLE:
+                    self.pr_poll()
+                    if _old != self.state:
+                        print(self)
+                    time.sleep(0.02)
+                else:
+                    print(self)
+                    time.sleep(0.4)
+
+                if self.state in [self.STATES.READY, self.STATES.ERROR, self.STATES.CANCEL]:
+                    print(self)
+                    break
+
+        except KeyboardInterrupt:
+            self.Cancel()
+            print("ctrl-c, cancel")
+
 
 
     def prompt_for_filename(self):
