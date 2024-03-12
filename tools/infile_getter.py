@@ -312,6 +312,7 @@ class InfileGetter():
 
         _YTDL = "youtube-dl"
         _YTDL = "/tmp/yt-dlp/yt-dlp.sh"
+        _YTDL = "/home/e4/git_proj/yt-dlp/yt-dlp.sh"
 
         if self.uri:
             _filename           = hashlib.md5(self.uri.encode()).hexdigest() + '.wav'
