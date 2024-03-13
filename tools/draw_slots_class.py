@@ -28,7 +28,7 @@ class DrawSlotsClass():
         self.mainWin.addstr(0, 0, _header2)
 
         _yy = 1
-        _ll = 'LLOCK'
+        _lock = 'LLOCK'
         for ix, f in enumerate(self.slots):
             _infile = 'None'
             if f.infile:
@@ -39,6 +39,7 @@ class DrawSlotsClass():
             _ch     = f"{f.ctrl_ch:2x}"
             _ff     = f"{_infile[:10]:^20s}"
             _dd     = f"{f.duration:9.4f}"
+            _ll     = f"{f.lock_length:9.4f}"
             _bb     = f"{f.bpm:6.2f}"
             _ss     = f"{f.shift_tempo:6.2f}"
             #_po     = f.PitchObj.state if f.PitchObj else 'None'
@@ -61,7 +62,8 @@ class DrawSlotsClass():
                 self.mainWin.addstr(_yy+ix, _xx, " | ", _attr); _xx += len(" | ")
 
             #for ih, h in enumerate([_dd, _bb, _ss]):
-            for ih, h in enumerate([_dd, ]):
+            #for ih, h in enumerate([_dd, ]):
+            for ih, h in enumerate([_ll, ]):
                 self.mainWin.addstr(_yy+ix, _xx, h, _attr);     _xx += len(h)
                 self.mainWin.addstr(_yy+ix, _xx, " | ", _attr); _xx += len(" | ")
 
@@ -72,30 +74,31 @@ class DrawSlotsClass():
                     _attr3 = _col1
                 _attr3 |= curses.A_REVERSE
 
-            self.mainWin.addstr(_yy+ix, _xx, _ll, _attr3);  _xx += len(_ll)
+            self.mainWin.addstr(_yy+ix, _xx, _lock, _attr3);  _xx += len(_lock)
             self.mainWin.addstr(_yy+ix, _xx, ' | ', _attr); _xx += len(" | ")
 
+
             for _fix, _file in enumerate([f.outfile, f.modfile, f.PitchObj]):
-                _attr2 = _attr
-                _ostr = '   '
-                if _fix == 2:
-                    if _file:
-                        _attr2 = _col2
-                        _ostr = 'OBJ'
+
+                if (_fix == 2 and _file != None) or (_file and os.path.isfile(_file)):
+                    _ostr = ['OUT', 'MOD', 'OBJ'][_fix]
+                    _attr2 = _col2
                 else:
-                    if os.path.isfile(_file):
-                        _attr2 = _col2
-                        _ostr = 'OUT' if _fix == 0 else 'MOD'
+                    _ostr = '   '
+                    _attr2 = _attr
 
-                #try:
-                if True:
-                    self.mainWin.addstr(_yy+ix, _xx, _ostr, _attr2);    _xx += len(_ostr)
-                    self.mainWin.addstr(_yy+ix, _xx, " | ", _attr);     _xx += len(' | ')
-                #except curses.error as cc:
-                #    curses.endwin()
-                #    print(cc)
+                if   _fix == 0: _blink = f.is_playing_out
+                elif _fix == 1: _blink = f.is_playing_mod
+                elif _fix == 2: _blink = f.is_playing_pobj
+                else:   _blink = False
 
-
+                if _blink:
+                    if (self.cyc_ct % 200) - 80 < 0:
+                        #_attr2 = curses.color_pair(124)
+                        _attr2 = curses.A_REVERSE
+                    
+                self.mainWin.addstr(_yy+ix, _xx, _ostr, _attr2);    _xx += len(_ostr)
+                self.mainWin.addstr(_yy+ix, _xx, " | ", _attr);     _xx += len(' | ')
 
 
     def DrawLogWin(self, **kwa):

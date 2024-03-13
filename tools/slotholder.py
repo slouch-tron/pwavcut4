@@ -356,7 +356,8 @@ class slotHolder(portHolder):
         self.logWin     = None
         self.infoWin    = None
 
-        try:
+        if True:
+        #try:
             while True:
                 ik = self.stdscr.getch()
                 if ik > 0 and self.keyCheck(ik):
@@ -367,9 +368,9 @@ class slotHolder(portHolder):
                 self.cyc_ct += 1
                 self.hz_update()
 
-        except KeyboardInterrupt:
-            curses.endwin()
-            print("\033[33mgot ctrl-C\033[0m")
+        #except KeyboardInterrupt:
+        #    curses.endwin()
+        #    print("\033[33mgot ctrl-C\033[0m")
 
 
     def Draw(self):
@@ -507,12 +508,14 @@ class slotHolder(portHolder):
         _func = self.arrowKeyDict.get(ikey, None)
         if _func:
             self.last_func = _func.__name__
+            self.Log(f"'{ikey}' - '{self.last_func}'", level='visual')
             _func()
             return True
 
         _func = self.keyDict.get(chr(ikey), None)
         if _func:
             self.last_func = _func.__name__
+            self.Log(f"'{chr(ikey)}' - '{self.last_func}'", level='visual')
             _func()
             return True
 

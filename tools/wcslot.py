@@ -57,6 +57,8 @@ class wcSlot():
     #CFG_SAVE_ATTRS  = ['pos0', 'pos1', 'bpm', 'shift_tempo', 'infile']
     DEFAULT_CFG = DEFAULT_CFG_DICT
 
+    FIELDS = ['OUT', 'MOD', 'OBJ']
+
     def __init__(self, **kwa):
         self.id     = wcSlot.ID
         wcSlot.ID   += 1
@@ -71,9 +73,9 @@ class wcSlot():
 
         self.ctrl_ch    = kwa.get('ctrl_ch', self.ctrl_ch)
         self.selected   = False
-        self.retrigger  = True
+        self.retrigger  = 1
         self.lastproc   = None
-        self.procs      = list()
+        self.procs      = list()    ## only for 'playOriginal'
 
         #assert(self.logger)
 
@@ -88,6 +90,12 @@ class wcSlot():
         self.modfile = os.path.join(self.out_path, "MOD.wav")
         self.recfile = os.path.join(self.out_path, "REC.wav")
         self.monfile = os.path.join(self.out_path, "MON.wav")
+
+        ## ought to probably detect from pygame.sound
+        self.is_playing_out = False
+        self.is_playing_mod = False
+        self.is_playing_pobj = False
+        self.is_playing_orig = False
 
         self.Log(f"{self.slotname} initialized!")
 
@@ -110,8 +118,25 @@ class wcSlot():
     ## have to pass the 'logger' back for proper appname to show up
     def Log(self, msg, **kwa):
         kwa.update(dict(logger=self.logger))
+        kwa.update(dict(level=kwa.get('level', 'debug')))
+
         self._Log(msg, **kwa)
 
+
+    ## was thinking of better ways to pass playing status.. but not that big a deal to just work w/ each case in the Draw function
+    def get_objs(self):
+        return [self.outfile, self.modfile, self.pitchObj]
+
+    def get_field(self, ix):
+        if not hasattr(self, '_field_flags'):
+            self._field_flags = [
+                'is_playing_out', 'is_playing_mod', 'is_playing_pobj', 'is_playing_orig']
+
+        return dict(
+            ix=_ix,
+            name=self.FIELDS[ix],
+            flag=self._field_flags[_ix],
+            )
 
     ## INFILE and infiles directory
     ###################################################################
@@ -130,7 +155,6 @@ class wcSlot():
             if os.path.isfile(fullpath):
                 self._infile = fullpath
 
-
     @property
     def Infiles(self):
         _found = list()
@@ -139,7 +163,6 @@ class wcSlot():
                 _found.append(os.path.join(self.WAV_IN_DIR, ff))
 
         return _found
-
 
     def get_infile_next(self, prev=0):
         if len(self.Infiles):
@@ -157,7 +180,6 @@ class wcSlot():
 
     def get_infile_prev(self):
         return self.get_infile_next(prev=1)
-
 
     ## POS, duration of last handled outfile/modfile
     ###################################################################
@@ -322,6 +344,7 @@ class wcSlot():
     ###################################################################
     ###################################################################
     def run_proc(self, cmd):
+        ## ought to just put our own popen and logging here
         return EXECUTE_CMD(cmd)
 
     @property
@@ -357,6 +380,8 @@ class wcSlot():
 
     def doCut3_out(self, mod=False):
         cmd = self.cmd_docut_mod if mod else self.cmd_docut_out
+        self.Log(f"doCut | mod={mod}")
+        self.Log(f"{cmd}")
         if cmd:
             _result = self.run_proc(cmd)
             self.Log(f"{self.slotname}.doCut mod={mod} | {cmd}")
@@ -378,35 +403,53 @@ class wcSlot():
         kwargs.update( {'mod':True} )
         return self.doPlay2_out(**kwargs)
 
+
     def doPlay2_out(self, stop=False, mod=False, debug=0):     ## with pygame
         _asound = self.modsound if mod else self.outsound
-        if _asound:
-            if self.retrigger:
+        if _asound:    
+            if mod:     self.is_playing_mod = not bool(stop)
+            else:       self.is_playing_out = not bool(stop)
+
+            if self.retrigger or stop:
                 _asound.stop()
                 if stop:
                     return True
 
-            (_asound.stop if stop else _asound.play())
+            _asound.play()
             return True
 
-        return False
 
     def doPlay_orig(self):
         self.procs.append(subprocess.Popen(
             shlex.split(self.cmd_doplay_orig),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            bufsize=1,
+            universal_newlines=True,
             ))
 
     
     def doStop(self):
-        for p in self.procs:
-            p and p.terminate()
+        self.is_playing_out = False
+        self.is_playing_mod = False
+        self.is_playing_orig = False
 
-        self.procs = list()
+        if len(self.procs) > 0:
+            [self.Log(f"terminate {p.pid}") for p in self.procs if p]
+            [p.terminate() for p in self.procs if p]
 
-        self.outsound and self.outsound.stop()
-        self.modsound and self.modsound.stop()
+        #self.procs = list()
+        _lout = "doStop"
+        if self.outsound:
+            self.outsound.stop()
+            _lout += " OUT"
+
+        if self.modsound:
+            self.modsound.stop()
+            _lout += " MOD"
+
+        self.Log(_lout)
+
 
     ############################################################################
     ############################################################################
