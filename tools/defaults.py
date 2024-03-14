@@ -5,6 +5,9 @@ assert(sys.version_info.major == 3)
 import curses
 import platform
 import yaml
+from enum import Enum
+
+DEBUG = int(os.environ.get('DEBUG', 1))
 
 DEFAULT_MIDI_LISTEN_CH      = 13
 DEFAULT_MIDI_LISTEN_CH_OUT  = 13
@@ -24,18 +27,20 @@ DEFAULT_CFGFILE = os.path.join(CFG_PATH, "cfg.yml")
 OK_FILE_TYPES   = ['.wav', '.mp3', '.mp4', '.ogg']
 OK_ARCHS        = ['armv7l', 'x86_64', 'aarch64']   ## RPI4 uses 'aarch64', old one is 'armv7l'?
 
-
 ## import to other places for consistency
 DEBUG       = int(os.environ.get('DEBUG', 1))
 TRANSPARENT = int(os.environ.get('TRANSPARENT', 1))
 
-DEFAULT_MIDI_CHS = dict(
-    listen=15,
-    mod=14,
-    kit=13,
+
+## SETUP base cfgfile and load globals from it
+##  some messy stuff but maybe we do want to run/check it every time
+_DEFAULT_MIDI_CHS = dict(
+    OUT=15,
+    MOD=14,
+    KIT=13,
     )
 
-DEFAULT_MIDI_CCS = dict(
+_DEFAULT_MIDI_CCS = dict(
     volume=7,
     pan=10,
     ptr0=20,
@@ -47,6 +52,54 @@ DEFAULT_MIDI_CCS = dict(
     fxn2=32,
     fxn3=33,
     )
+
+_DEFAULT_CFG = dict(CTRL=dict(
+    CHS=_DEFAULT_MIDI_CCS,
+    CCS=_DEFAULT_MIDI_CHS,
+    supported_filetypes=OK_FILE_TYPES,
+    supported_archs=OK_ARCHS,
+    ))
+
+## put 'try' here to maybe give up on missing cfg file?  otherwise program wont start without
+not os.path.isdir(CFG_PATH) and os.mkdir(CFG_PATH)
+if not os.path.isfile(DEFAULT_CFGFILE):
+    with open(DEFAULT_CFGFILE, 'w') as fp:
+        yaml.dump(_DEFAULT_CFG, fp)
+
+_FILE_CFG = dict()
+with open(DEFAULT_CFGFILE, 'r') as fp:
+    _FILE_CFG = yaml.full_load(fp)
+
+_CTRL = _FILE_CFG['CTRL']
+if 'CCS' in _CTRL:
+    DEFAULT_MIDI_LISTEN_CH_OUT = _CTRL['CHS'].get('OUT', _DEFAULT_MIDI_CHS['OUT'])
+    DEFAULT_MIDI_LISTEN_CH_MOD = _CTRL['CHS'].get('MOD', _DEFAULT_MIDI_CHS['MOD'])
+    DEFAULT_MIDI_LISTEN_CH_KIT = _CTRL['CHS'].get('KIT', _DEFAULT_MIDI_CHS['KIT'])
+
+DEFAULT_MIDI_CCS = dict()
+if 'CHS' in _CTRL:
+    for k, v in _DEFAULT_MIDI_CCS.items():
+        DEFAULT_MIDI_CCS.update({ k : v })
+        if k in _CTRL['CCS']:
+            _val = _CTRL['CCS'][k]
+            if _val != v:     ## non-default
+                print(f"cfgfile: {k}={_val}, vs default={v}")
+                DEFAULT_MIDI_CCS.update({ k : _CTRL['CCS'][k] })
+
+print(DEFAULT_MIDI_LISTEN_CH_OUT)
+print(DEFAULT_MIDI_CCS)
+input()
+
+
+## Enum is simple but DB is changeable if we are loading from a file
+'''
+from collections import namedtuple
+DEFAULT_MIDI_CHS_TUP = namedtuple('CHS', ['OUT', 'MOD', 'KIT'])(15,14,13)
+class DEFAULT_MIDI_CHS_ENUM(Enum):
+    OUT = 15
+    MOD = 14
+    KIT = 13
+'''
 
 
 ######################################################################
@@ -105,6 +158,9 @@ def GET_CFG(cfgfile=None, dump=False)->dict:   ## cfgfile = yaml filename string
         DEFAULT_MIDI_CHS=DEFAULT_MIDI_CHS,
         )
 
+    if cfgfile == True:
+        cfgfile = DEFAULT_CFGFILE
+
     if cfgfile and os.path.isfile(cfgfile):
         _print(f"using cfgfile='{cfgfile}'")
         file_cfg = dict()
@@ -132,7 +188,9 @@ def GET_CFG(cfgfile=None, dump=False)->dict:   ## cfgfile = yaml filename string
                     _print(f"updating cfg[{k}] : {v} ({type(v)})")
                     default_cfg.update({ k : v})
             else:
+                ## seeind this loading default_midi_chs 
                 print("weird situaton?")
+                print(" | ".join([str(x) for x in [k, v]]))
 
     elif dump:
         cfgfile = cfgfile or DEFAULT_CFGFILE
@@ -141,9 +199,30 @@ def GET_CFG(cfgfile=None, dump=False)->dict:   ## cfgfile = yaml filename string
             yaml.dump(default_cfg, fp)
 
     else:
-        _print("returning default_cfg unmodified")
+        _print("returning default_cfg from file unmodified")
+        _print(default_cfg)
         
     return default_cfg
+
+
+def CFG_LOAD_GLOB(cfg):
+    if 'DEFAULT_MIDI_CHS' in cfg:
+        print(cfg)
+        global DEFAULT_MIDI_CHS
+        DEFAULT_MIDI_CHS = cfg['DEFAULT_MIDI_CHS']
+        global DEFAULT_MIDI_LISTEN_CH_OUT
+        DEFAULT_MIDI_LISTEN_CH_OUT = DEFAULT_MIDI_CHS.get('listen', 2)
+        global DEFAULT_MIDI_LISTEN_CH_MOD
+        global DEFAULT_MIDI_LISTEN_CH_KIT
+        DEFAULT_MIDI_LISTEN_CH_MOD = DEFAULT_MIDI_CHS.get('mod', DEFAULT_MIDI_LISTEN_CH_MOD)
+        DEFAULT_MIDI_LISTEN_CH_KIT = DEFAULT_MIDI_CHS.get('kit', DEFAULT_MIDI_LISTEN_CH_KIT)
+        print(DEFAULT_MIDI_LISTEN_CH_OUT)
+
+
+
+    if 'DEFAULT_MIDI_CCS' in cfg:
+        global DEFAULT_MIDI_CCS
+        DEFAULT_MIDI_CCS = cfg['DEFAULT_MIDI_CCS']
 
 
 ######################################################################
@@ -163,9 +242,15 @@ def cfg2str(cfgdict):
 ## class 'needs to know' but surely we can have some assumptions about a set-up env
 MAKE_DEFAULT_DIRS()
 assert(platform.machine() in OK_ARCHS)
-not os.path.isfile(DEFAULT_CFGFILE) and GET_CFG(dump=1)
+if os.path.isfile(DEFAULT_CFGFILE):
+    print("load cfg")
+    CFG = GET_CFG(cfgfile=True)
+    CFG_LOAD_GLOB(CFG)
+else:
+    print("new cfg")
+    GET_CFG(dump=1)
 
-
+input(DEFAULT_MIDI_LISTEN_CH_OUT)
 if __name__ == '__main__':
     #cfg = GET_CFG(DEFAULT_CFGFILE)
     cfg = GET_CFG("./cfg/ttt.yml")

@@ -9,7 +9,7 @@ import curses
 ##  DEFAULT_CFG
 ## passes in 'cfgname' since some things are 'slot' some are 'device'
 
-
+## should this be a 'classmethod'?
 def CFGSAVE(self, cfgname, cfgdict=None, no_trim=False):
     curses.endwin()
     if no_trim:     
