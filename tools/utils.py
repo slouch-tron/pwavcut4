@@ -14,8 +14,13 @@ from .defaults import DEFAULT_WAV_IN_DIR, DEFAULT_SRC_OUT_DIR, DEFAULT_CONVERT_D
 from .notes import midi_to_frequency2 as midi_to_frequency
 from .log_setup import GET_LOGGER
 
-UTILS_LOGGER    = GET_LOGGER(appname="utils")
-DOFFMPEG_LOGGER = GET_LOGGER(appname="DoFFMPEG")
+## should stay 'in scope' and connected throughout program run?
+#UTILS_LOGGER    = GET_LOGGER(appname="utils")
+#DOFFMPEG_LOGGER = GET_LOGGER(appname="DoFFMPEG")
+
+## experimenting with only init-ing them when needed.  though why not just init them.
+UTILS_LOGGER    = None
+DOFFMPEG_LOGGER = None
 
 ## where to keep this, if we phase 'utils' out.  defaults?
 ## A: maybe here is fine, happy medium where all files converted same way but also,
@@ -23,22 +28,46 @@ DOFFMPEG_LOGGER = GET_LOGGER(appname="DoFFMPEG")
 INFILE_CONVERT_CMD_FMT = 'ffmpeg -y -i "{}" -ar 44100 -map_metadata -1 "{}"'
 
 
+def _Log(txt, toconsole=1):
+    global UTILS_LOGGER
+    if not UTILS_LOGGER:
+        UTILS_LOGGER = GET_LOGGER(appname="utils")
+
+    UTILS_LOGGER.debug(txt)
+    toconsole and print(txt)
+
+def INFILE_CONVERT(infile, outfile_fullpath):
+    #_cmd = f"ffmpeg -y -i \"{infile}\" -ar 44100 -map_metadata -1 \"{outfile_fullpath}\""
+    _cmd = INFILE_CONVERT_CMD_FMT.format(infile, outfile_fullpath)
+    _Log("InfileConvert: cmd")
+    _Log("  " + _cmd)
+    return EXECUTE_CMD(_cmd)
+    
+
 def PYG_SOUND_LOAD(filename):
+    def _log(txt): _Log("PYG_SL: " + txt)
     #if not pygame.mixer.get_init():
     #    pygame.mixer.init()
 
     if os.path.isfile(filename):
+        _log(f"try loading '{filename}'")
         try:
             _sound = pygame.mixer.Sound(filename)
         except pygame.error as ee:
             curses.endwin()
+            _log(f"error loading '{filename}', did we log it?")
             raise ee
 
+        _log(f"OK loading '{filename}'")
         return _sound
 
+
 def NORMALIZE(filename, outfile="/tmp/norm1.wav"):
+    def _log(txt): _Log("NORMALIZE: " + txt)
     if os.path.isfile(filename):
+        _log(f"{filename} to {outfile}")
         if filename == outfile:
+            _log("(copy dodge)")
             _tmpfile = os.path.join(DEFAULT_CONVERT_DIR, "_normalize_tmp.wav")
             os.system(f"cp {filename} {_tmpfile}")
             filename = _tmpfile
@@ -47,6 +76,7 @@ def NORMALIZE(filename, outfile="/tmp/norm1.wav"):
         seg = AudioSegment.from_wav(filename)
         norm = seg.normalize()
         norm.export(outfile)
+        _log(f"{outfile} seems ok")
 
 
 ## no longer using this?
@@ -164,16 +194,6 @@ def EXECUTE_CMD(cmd, sout=1, serr=1, timeout=16, endwin=0):
     return _poll
 
 
-def INFILE_CONVERT(infile, outfile_fullpath, debug=1):
-    #_cmd = f"ffmpeg -y -i \"{infile}\" -ar 44100 -map_metadata -1 \"{outfile_fullpath}\""
-    _cmd = INFILE_CONVERT_CMD_FMT.format(infile, outfile_fullpath)
-
-    if debug:
-        #curses.endwin()
-        print(f"INFILE_CONVERT: cmd={_cmd}")
-
-    return EXECUTE_CMD(_cmd)
-    
 
 ## Used by pitch slicer class
 def DOFFMPEG(
@@ -187,7 +207,11 @@ def DOFFMPEG(
     Log=None
     ):
 
-    def _Log(txt, level='debug'):
+    def _log(txt):
+        global DOFFMPEG_LOGGER
+        if not DOFFMPEG_LOGGER:
+            DOFFMPEG_LOGGER = GET_LOGGER(appname="DoFFMPEG")
+
         DOFFMPEG_LOGGER.debug(txt)
 
     ## maybe keep named loggers in the main class?
@@ -249,13 +273,14 @@ def DOFFMPEG(
 
         _freq = midi_to_frequency(pitch_ix)
         #_Log(f"midi_to_frequency({pitch_ix}) = {_freq}", level='debug')
-        _Log(f"{cmd}", level='debug')
+        _log(f"{cmd}")
 
         return cmd
 
     
 def EW_PROMPT(prompt="enter a value: ", vtype=float):
     curses.endwin()
+    _Log(f"EW_PROMPT '{prompt}'")
     value = input(prompt)
     if value and value != '\n':
         try:

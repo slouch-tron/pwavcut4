@@ -420,6 +420,7 @@ class wcSlot():
 
 
     def doPlay_orig(self):
+        assert(self.cmd_doplay_orig)    ## return?  do nothing?
         self.procs.append(subprocess.Popen(
             shlex.split(self.cmd_doplay_orig),
             stdout=subprocess.PIPE,

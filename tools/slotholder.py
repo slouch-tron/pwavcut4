@@ -131,6 +131,8 @@ class slotHolder(portHolder):
 
     def Quit(self):
         curses.endwin()
+        sys.exit()
+
         print("____")
         print(self)
         for f in self.slots:

@@ -10,7 +10,7 @@ import yaml
 
 from enum import Enum, auto
 from .utils import INFILE_CONVERT_CMD_FMT   
-from .defaults import DEFAULT_WAV_IN_DIR, CFG_PATH, pr_debug, DEBUG, DEFAULT_CONVERT_DIR
+from .defaults import DEFAULT_WAV_IN_DIR, CFG_PATH, DEBUG, DEFAULT_CONVERT_DIR
 from .log_setup import GET_LOGGER, TOCONSOLE
 from .cfg_setup import CFGSAVE, CFGLOAD
 from .enums import IGStates as States, IGCopyModes as CopyModes
