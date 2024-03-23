@@ -207,6 +207,10 @@ def DOFFMPEG(
     Log=None
     ):
 
+    ''' Convert audio file assuming it is tuned with basenote.
+        Attempts to keep the length consistent if tempo is shifted,
+            resulting in 'pitch down' effect.
+    '''
     def _log(txt):
         global DOFFMPEG_LOGGER
         if not DOFFMPEG_LOGGER:

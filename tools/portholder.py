@@ -7,7 +7,14 @@ import mido
 import argparse
 import curses
 
-DEBUG = int(os.environ.get('DEBUG', 0))
+from .defaults import CFGSAVE, CFGLOAD, DEBUG
+#DEBUG = int(os.environ.get('DEBUG', 0))
+
+_MIDO_FUNCS = {
+    0 : [mido.get_input_names, mido.open_input],
+    1 : [mido.get_output_names, mido.open_output],
+    2 : [mido.get_ioport_names, mido.open_ioport],
+    }
 
 
 class portHolder():
@@ -61,6 +68,7 @@ class portHolder():
     @staticmethod
     def GETPORT(*arg, **kwa):
         return GET_PORT(*arg, *kwa)
+
 
     ## not needed here, the slots may want to change channel though
     '''
@@ -220,11 +228,53 @@ class portHolder():
 
         ostr = "ICOF: "
         for f in [self.port_i, self.port_c, self.port_o, self.port_f]:
-            ostr += " {:6s}".format(f.name.split(' ')[-1] if f else '-')
+            ostr += " {:6s}".format(self._get_portnum(f) or '-')
 
         self._portsWin.addstr(0, 0, ostr, curses.color_pair(28))
         self._portsWin.refresh()
             
+
+    ############################################################################
+    ############################################################################
+    ## CFG SAVE and LOAD
+
+    @staticmethod
+    def _get_portnum(port):
+        return port.name.split(' ')[-1] if port else None
+
+    ## 'super' isnt working like i thought.  
+    ##    and why not just have these named separately instead of weird metaprogramming?
+    @property
+    def PCfgDict(self):
+        return dict(
+            port_i=self._get_portnum(self.port_i),
+            port_o=self._get_portnum(self.port_o),
+            port_c=self._get_portnum(self.port_c),
+            port_f=self._get_portnum(self.port_f),
+            )
+
+    @PCfgDict.setter
+    def PCfgDict(self, cfg):
+        if 'port_i' in cfg:     self.port_i = cfg['port_i']
+        if 'port_c' in cfg:     self.port_i = cfg['port_c']
+        if 'port_o' in cfg:     self.port_i = cfg['port_o']
+        if 'port_f' in cfg:     self.port_i = cfg['port_f']
+        #[setattr(self, k) for k in cfg if k in [f"port{x}" for x in 'icof']]
+        return
+
+        for k in cfg.keys():
+            if k in ['port_i', 'port_c', 'port_o', 'port_f']: 
+                setattr(self, k) 
+
+    def PCfgLoad(self):
+        self.Log("loading cfg!")
+        self.PCfgDict = CFGLOAD(self.devname)
+
+    def PCfgSave(self):
+        _data = CFGSAVE(self.devname, self.PCfgDict)
+        _data and self.Log(f"PortHolder saved config: {_data}", level='visual')
+        self.Log(f"PortHolder saved config: {_data}", level='debug')
+
 
 #### cant reach these like properties in the subclasses of this..
 '''
@@ -247,14 +297,9 @@ def dbprint(txt):
         print(f"\033[33m{__file__}: {txt}\033[0m", file=sys.stderr)
 
 
-def GET_PORT(hint, iotype=0):
-    dbprint(" | ".join([
-        "GET_PORT",
-        f"hint={hint}",
-        f"iotype={iotype}",
-        ]))
-
-    if hint == None:
+def GET_PORT2(hint, iotype=0):
+    dbprint("GET_PORT | hint='{hint}', iotype={iotype}")
+    if not hint:
         return
 
     _func = {
@@ -268,4 +313,17 @@ def GET_PORT(hint, iotype=0):
             if re.search(hint.lower(), p.lower()):
                 dbprint(p)
                 return _func[1](p)
+
+
+def GET_PORT(hint, iotype=0):
+    dbprint("GET_PORT | iotype={iotype} | hint='{hint}'")
+    if hint:
+        _func = _MIDO_FUNCS.get(iotype, None)
+        if _func:
+            for p in _func[0]():
+                if re.search(hint.lower(), p.lower()):
+                    return _func[1](p)
+
+
+
 

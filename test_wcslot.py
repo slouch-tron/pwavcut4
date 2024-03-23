@@ -34,6 +34,8 @@ def main_test2(stdscr):
     print(hhh)
     hhh.selectedSlot.pos1 = 13.0
 
+    #input(hhh.CfgDict)
+
     hhh.Run()
 
 

@@ -10,18 +10,16 @@ import time
 import yaml
 
 
-from .slicer_pitches import PitchesSlicer
-
-## ought to just have our own EXECUTE_CMD maybe?  phase the 'utils' file out?
-from .utils import PYG_SOUND_LOAD, EXECUTE_CMD, NORMALIZE
 from .defaults import (
         DEFAULT_WAV_IN_DIR, DEFAULT_WAV_OUT_DIR, 
         OK_FILE_TYPES, pr_debug,
-        CFG_PATH,
+        CFGSAVE, CFGLOAD,
         )
 
 from .log_setup import GET_LOGGER
-from .cfg_setup import CFGSAVE, CFGLOAD
+## ought to just have our own EXECUTE_CMD maybe?  phase the 'utils' file out?
+from .utils import PYG_SOUND_LOAD, EXECUTE_CMD, NORMALIZE
+from .slicer_pitches import PitchesSlicer
 
 
 ## to compare when saving cfg, dont save defaults
@@ -66,7 +64,7 @@ class wcSlot():
         self.slotnum    = kwa.get('slotnum', 0)
         self.slotname   = f"slot{self.slotnum:02d}"
         #self.stdscr     = kwa.get('stdscr', None)
-        self._Log        = kwa.get('Log')
+        self._Log        = kwa.get('Log', None)
         #self.logger     = kwa.get('logger', GET_LOGGER(appname=self.slotname))
         self.logger     = GET_LOGGER(appname=self.slotname)
         #self.logger     = kwa.get('logger', None)
@@ -97,7 +95,7 @@ class wcSlot():
         self.is_playing_pobj = False
         self.is_playing_orig = False
 
-        self.Log(f"{self.slotname} initialized!")
+        #self.Log(f"{self.slotname} initialized!")
 
 
     def __str__(self):
@@ -116,11 +114,18 @@ class wcSlot():
 
 
     ## have to pass the 'logger' back for proper appname to show up
+    ## 240322 - but now hard to use standalone, we have to pass all these logger objs in.
+    ##  are any useful log msgs from slots going to 'visual' level?
+    ##  could just improve function return values, or have a 'state' for each slot
     def Log(self, msg, **kwa):
-        kwa.update(dict(logger=self.logger))
-        kwa.update(dict(level=kwa.get('level', 'debug')))
-
-        self._Log(msg, **kwa)
+        if not self._Log:
+            _func = getattr(self.logger, kwa.get('level', 'debug'), None)
+            assert(_func)
+            _func(msg)
+        else:
+            kwa.update(dict(logger=self.logger))
+            kwa.update(dict(level=kwa.get('level', 'debug')))
+            self._Log(msg, **kwa)
 
 
     ## was thinking of better ways to pass playing status.. but not that big a deal to just work w/ each case in the Draw function
@@ -456,14 +461,6 @@ class wcSlot():
     ############################################################################
 
     @property
-    def cfg_filename(self):
-        if not hasattr(self, '_cfg_filename'):
-            _file = os.path.splitext(os.path.split(sys.argv[0])[1])[0] + ".yml"
-            self._cfg_filename = os.path.join(CFG_PATH, _file)
-
-        return self._cfg_filename
-
-    @property
     def CfgDict(self):
         return dict(
             pos0=self.pos0,
@@ -478,14 +475,34 @@ class wcSlot():
             retrigger=self.retrigger,
             )
 
-    def CfgLoad(self):  CFGLOAD(self, self.slotname)
+    @CfgDict.setter
+    def CfgDict(self, cfg):
+        _float_attrs = ['bpm', 'shift_tempo', 'lock_length', 'pos0', 'pos1']
+        for k in cfg.keys():
+            assert(hasattr(self, k))
+            setattr(self, k, float(cfg[k]) if k in _float_attrs else cfg[k])
+
+
+    def CfgLoad(self):  
+        self.Log("loading cfg")
+        self.CfgDict = CFGLOAD(self.slotname)
+        #CFGLOAD(self, self.slotname)
+
     def CfgSave(self):
-        _cfgdict = None     ## unneccessary but i dont like it saving default ch!
-        if self.slotnum == self.ctrl_ch:
-            _cfgdict = self.CfgDict
-            _cfgdict.pop('ctrl_ch')
-        
-        CFGSAVE(self, self.slotname, cfgdict=_cfgdict)
+        _cfgdict = self.CfgDict
+        self.slotnum == self.ctrl_ch and _cfgdict.pop('ctrl_ch')
+        _data = CFGSAVE(self.slotname, _cfgdict, cfgdict_default=DEFAULT_CFG_DICT)
+        _data and self.Log(f"saved config: {_data}", level='visual')
+        self.Log(f"saved config: {_data}", level='debug')
+
+        #_cfgdict = None     ## unneccessary but i dont like it saving default ch!
+        #if self.slotnum == self.ctrl_ch:
+        #    _cfgdict = self.CfgDict
+        #    _cfgdict.pop('ctrl_ch')
+        #    CFGSAVE(self, self.slotname, cfgdict=_cfgdict)
+        #else:
+        #    CFGSAVE(self, self.slotname)
+
 
     ############################################################################
     ############################################################################
@@ -591,4 +608,5 @@ class wcSlot():
             _print(f"in:  {self.modfile}")
             _print(f"out: {norm_file}")
             NORMALIZE(self.modfile, norm_file)
+
 

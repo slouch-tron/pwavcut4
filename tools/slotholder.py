@@ -15,11 +15,13 @@ from .slicer_pitches import PitchesSlicer
 from .defaults import (
         DEFAULT_MIDI_LISTEN_CH_OUT, DEFAULT_MIDI_LISTEN_CH_MOD, DEFAULT_MIDI_LISTEN_CH_KIT, 
         CURSE_INIT, 
+        CFGLOAD, CFGSAVE,
         )
 
 from .utils import EW_PROMPT, DRAWHELPWIN
 from .draw_slots_class import DrawSlotsClass
 from .log_setup import GET_LOGGER
+from .cfg_setup import CFG_FILENAME
 #from .enums import FocusStates, EditFields
 
 
@@ -58,7 +60,7 @@ class slotHolder(portHolder):
                 slotnum=s, 
                 ctrl_ch=s, 
                 Log=self.Log, 
-                #logger=self.logger_slot,
+                logger=self.logger,
                 ))
 
         ## 240229 - curse.wrapper(main), initscr, then make SlotHolder and Run
@@ -338,7 +340,8 @@ class slotHolder(portHolder):
             self._Importer = None
 
         if not self._Importer:
-            self.Importer = InfileGetter(Log=self.Log)
+            #self.Importer = InfileGetter(Log=self.Log)
+            pass
 
         return self._Importer
 
@@ -433,6 +436,10 @@ class slotHolder(portHolder):
                     self.stdscr.clear()
                     return
 
+                #super().CfgSave() if _chr in 'Ss' else super().CfgLoad()
+                #self.PCfgSave() if _chr in 'Ss' else self.PCfgLoad()
+                self.CfgSave() if _chr in 'Ss' else self.CfgLoad()
+
                 for s in self.slots:
                     s.CfgSave() if _chr in 'Ss' else s.CfgLoad()
 
@@ -444,7 +451,37 @@ class slotHolder(portHolder):
 
     @property
     def CfgDict(self):
-        return dict()
+        _dict = self.PCfgDict
+        _dict.update(dict(selected_ix=self.selected_ix))
+        _dict.update(dict(field_ix=self.field_ix))
+        _dict.update(dict(resolution_ix=self.resolution_ix))
+        return _dict
+
+    @CfgDict.setter
+    def CfgDict(self, cfg):
+        for f in cfg:
+            setattr(self, f, cfg[f])
+
+
+    def CfgSave(self):
+        _cfg = self.CfgDict
+        for k in ['selected_ix', 'field_ix', 'resolution_ix']:
+            #if True:
+            if self.CfgDict[k] != 0:
+                _cfg.update({ k : self.CfgDict[k] })
+
+        _data = None
+        if _cfg:
+            _data = CFGSAVE(self.devname, _cfg)
+            self.Log(f"SlotHolder saved config: {_data}", level='visual')
+
+        self.Log(f"SlotHolder saved config: {_data}", level='debug')
+
+
+    def CfgLoad(self):
+        self.Log("loading config")
+
+
 
     ############################################################################
     ############################################################################

@@ -10,9 +10,15 @@ import yaml
 
 from enum import Enum, auto
 from .utils import INFILE_CONVERT_CMD_FMT   
-from .defaults import DEFAULT_WAV_IN_DIR, CFG_PATH, DEBUG, DEFAULT_CONVERT_DIR
+from .defaults import (
+    DEFAULT_WAV_IN_DIR, DEBUG, DEFAULT_CONVERT_DIR,
+    CFGSAVE, CFGLOAD,
+    #CFG_PATH,
+    CFG_FILENAME,
+    )
+
 from .log_setup import GET_LOGGER, TOCONSOLE
-from .cfg_setup import CFGSAVE, CFGLOAD
+#from .cfg_setup import CFGSAVE, CFGLOAD
 from .enums import IGStates as States, IGCopyModes as CopyModes
 
 #RECOPY      = int(os.environ.get('RECOPY', 1))
@@ -562,6 +568,8 @@ class InfileGetter():
     #######################################################################
     @property
     def cfg_filename(self):
+        return CFG_FILENAME
+
         if not hasattr(self, '_cfg_filename'):
             _file = os.path.splitext(os.path.split(sys.argv[0])[1])[0] + ".yml"
             #self._cfg_filename = _file

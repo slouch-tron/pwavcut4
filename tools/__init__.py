@@ -10,6 +10,7 @@ from .log_setup import GET_LOGGER
 
 from .utils import INFILE_CONVERT, NORMALIZE
 from .defaults import CURSE_INIT
+from .cfg_setup import CFG_FILENAME
 
 
 ## found this in log_setup also
