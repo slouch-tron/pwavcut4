@@ -49,7 +49,7 @@ class DrawSlotsClass():
                 _attr |= curses.A_REVERSE
 
             _ostr = "   |          |          |                      |    |           |       |"
-            self.mainWin.addstr(_yy+ix, 0, _ostr, _attr)
+            #self.mainWin.addstr(_yy+ix, 0, _ostr, _attr)
 
             _xx = 0
             _ostr = f"{ix:02d}"
@@ -84,10 +84,12 @@ class DrawSlotsClass():
 
             #continue
 
-            for _fix, _file in enumerate([f.outfile, f.modfile, f.PitchObj]):
+            #for _fix, _file in enumerate([f.outfile, f.modfile, f.PitchObj]):
+            for _fix, _file in enumerate([f.outsound, f.modsound, f.PitchObj]):
 
                 ## os.path.isfile is probably killin the loop time by ~400hz
-                if (_fix == 2 and _file != None) or (_file and os.path.isfile(_file)):
+                #if (_fix == 2 and _file != None) or (_file and os.path.isfile(_file)):
+                if (_fix == 2 and _file != None) or (_file):
                     _ostr = ['OUT', 'MOD', 'OBJ'][_fix]
                     _attr2 = _col2
                 else:
@@ -104,7 +106,7 @@ class DrawSlotsClass():
                         #_attr2 = curses.color_pair(124)
                         _attr2 = curses.A_REVERSE
                     
-                #self.mainWin.addstr(_yy+ix, _xx, _ostr, _attr2);    _xx += len(_ostr) + 3
+                self.mainWin.addstr(_yy+ix, _xx, _ostr, _attr2);    _xx += len(_ostr) + 3
                 #self.mainWin.addstr(_yy+ix, _xx, " | ", _attr);     _xx += len(' | ')
 
 
