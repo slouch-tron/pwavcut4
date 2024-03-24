@@ -29,7 +29,7 @@ def GET_LOGGER(**kwa):
     #logger.setLevel(0)
 
     formatter = logging.Formatter(  
-        fmt='%(asctime)s | %(name)-12s | %(levelname)-7s | %(message)s',
+        fmt='%(asctime)s | %(name)-16s | %(levelname)-7s | %(message)s',
         datefmt='%H:%M:%S',
         )
 
@@ -39,7 +39,7 @@ def GET_LOGGER(**kwa):
         )
 
     c_formatter = logging.Formatter(  
-        fmt='%(asctime)s | %(name)-12s | \033[32m%(levelname)-7s\033[0m | %(message)s',
+        fmt='%(asctime)s | %(name)-16s | \033[32m%(levelname)-7s\033[0m | %(message)s',
         datefmt='%H:%M:%S',
         )
 

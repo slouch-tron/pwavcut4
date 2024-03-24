@@ -53,6 +53,8 @@ class Slicer(portHolder):
 
     CH_MAX = 10
 
+    SRC_OUT_DIR = DEFAULT_SRC_OUT_DIR
+
     def __init__(self, **kwa):
         self.id         = Slicer.ID
         Slicer.ID += 1
@@ -80,6 +82,8 @@ class Slicer(portHolder):
         #self.alarms     = list()   
 
         self.sounds     = dict()
+        self.sounds_old = dict()    ## to keep playing ones if we replace the source underneath
+        self.procs_old  = dict()
         self.playing_ct = 0
         self.lastRecd   = None
         self.lastSent   = None
@@ -88,6 +92,10 @@ class Slicer(portHolder):
 
         self.CmdQueue   = list()
         self.last_cmd   = None
+
+        self.params_changed = False
+        self.outfile_dir    = os.path.join(self.SRC_OUT_DIR, self.devname)
+        not os.path.isdir(self.outfile_dir) and os.mkdir(self.outfile_dir)
 
         if not pygame.get_init():
             pygame.mixer.init()
@@ -444,5 +452,30 @@ class Slicer(portHolder):
 ########################################################################################
 ########################################################################################
 	
+
+
+class ASoundWFlag(pygame.mixer.Sound):
+    @property
+    def to_update(self):
+        if not hasattr(self, '_to_update'):
+            self._to_update = True
+
+        return self._to_update
+
+    @to_update.setter
+    def to_update(self, val):
+        self._to_update = val
+
+    @property
+    def note_no(self):
+        if not hasattr(self, '_note_no'):
+            self._note_no = None
+
+        return self_note_no
+
+    @note_no.setter
+    def note_no(self, num):
+        self._note_no = num
+
 
 

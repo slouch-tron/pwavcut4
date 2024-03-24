@@ -48,24 +48,29 @@ class DrawSlotsClass():
             if ix == self.selected_ix:
                 _attr |= curses.A_REVERSE
 
+            _ostr = "   |          |          |                      |    |           |       |"
+            self.mainWin.addstr(_yy+ix, 0, _ostr, _attr)
+
             _xx = 0
             _ostr = f"{ix:02d}"
-            self.mainWin.addstr(_yy+ix, 0, _ostr, _attr);   _xx += len(_ostr)
-            self.mainWin.addstr(_yy+ix, _xx, " | ", _attr); _xx += len(" | ")
+            self.mainWin.addstr(_yy+ix, 0, _ostr, _attr);   _xx += len(_ostr) + 3
+            #self.mainWin.addstr(_yy+ix, _xx, " | ", _attr); _xx += len(" | ")
 
-            for ig, g in enumerate([_pos0, _pos1, _ff, _ch]): ## _ff
+            for ig, g in enumerate([_pos0, _pos1, _ff]): ## _ff
                 _tmpattr = _attr
                 if self.field_ix == ig and ix == self.selected_ix:
                     _tmpattr = _col1 | curses.A_REVERSE
 
-                self.mainWin.addstr(_yy+ix, _xx, g, _tmpattr);  _xx += len(g)
-                self.mainWin.addstr(_yy+ix, _xx, " | ", _attr); _xx += len(" | ")
+                self.mainWin.addstr(_yy+ix, _xx, g, _tmpattr);  _xx += len(g) + 3
+                #self.mainWin.addstr(_yy+ix, _xx, " | ", _attr); _xx += len(" | ")
 
-            #for ih, h in enumerate([_dd, _bb, _ss]):
-            #for ih, h in enumerate([_dd, ]):
-            for ih, h in enumerate([_ll, ]):
-                self.mainWin.addstr(_yy+ix, _xx, h, _attr);     _xx += len(h)
-                self.mainWin.addstr(_yy+ix, _xx, " | ", _attr); _xx += len(" | ")
+            #_ostr = f"{_ch}   {_ll}   "
+            #self.mainWin.addstr(_yy+ix, _xx, _ostr, _attr)
+            #_xx += len(_ostr)
+
+            for ih, h in enumerate([_ch, _ll, ]):
+                self.mainWin.addstr(_yy+ix, _xx, h, _attr);     _xx += len(h) + 3
+                #self.mainWin.addstr(_yy+ix, _xx, " | ", _attr); _xx += len(" | ")
 
             _attr3 = _attr
             #_attr3 = _col2
@@ -74,12 +79,14 @@ class DrawSlotsClass():
                     _attr3 = _col1
                 _attr3 |= curses.A_REVERSE
 
-            self.mainWin.addstr(_yy+ix, _xx, _lock, _attr3);  _xx += len(_lock)
-            self.mainWin.addstr(_yy+ix, _xx, ' | ', _attr); _xx += len(" | ")
+            self.mainWin.addstr(_yy+ix, _xx, _lock, _attr3);  _xx += len(_lock) + 3
+            #self.mainWin.addstr(_yy+ix, _xx, ' | ', _attr); _xx += len(" | ")
 
+            #continue
 
             for _fix, _file in enumerate([f.outfile, f.modfile, f.PitchObj]):
 
+                ## os.path.isfile is probably killin the loop time by ~400hz
                 if (_fix == 2 and _file != None) or (_file and os.path.isfile(_file)):
                     _ostr = ['OUT', 'MOD', 'OBJ'][_fix]
                     _attr2 = _col2
@@ -97,8 +104,8 @@ class DrawSlotsClass():
                         #_attr2 = curses.color_pair(124)
                         _attr2 = curses.A_REVERSE
                     
-                self.mainWin.addstr(_yy+ix, _xx, _ostr, _attr2);    _xx += len(_ostr)
-                self.mainWin.addstr(_yy+ix, _xx, " | ", _attr);     _xx += len(' | ')
+                #self.mainWin.addstr(_yy+ix, _xx, _ostr, _attr2);    _xx += len(_ostr) + 3
+                #self.mainWin.addstr(_yy+ix, _xx, " | ", _attr);     _xx += len(' | ')
 
 
     def DrawLogWin(self, **kwa):

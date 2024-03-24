@@ -13,7 +13,7 @@ TRANSPARENT = int(os.environ.get('TRANSPARENT', 1))
 CFGFILE     = os.environ.get('CFGFILE', None)
 DIR_BASE    = os.environ.get('DIR_BASE', "/tmp")
 
-USE_TOPLEVEL_CONFIG_FILE = 0
+USE_TOPLEVEL_CONFIG_FILE = 1
 
 ## Paths
 #DIR_BASE = "/tmp"
@@ -39,9 +39,9 @@ assert(platform.machine() in OK_ARCHS)
 ## SETUP default cfg, exists to check against whether used
 ######################################################################
 _DEFAULT_MIDI_CHS = dict(
-    OUT=15,
-    MOD=14,
-    KIT=13,
+    OUT=13,
+    MOD=12,
+    KIT=11,
     )
 
 _DEFAULT_MIDI_CCS = dict(

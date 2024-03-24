@@ -340,7 +340,7 @@ class slotHolder(portHolder):
             self._Importer = None
 
         if not self._Importer:
-            #self.Importer = InfileGetter(Log=self.Log)
+            self.Importer = InfileGetter(Log=self.Log)
             pass
 
         return self._Importer

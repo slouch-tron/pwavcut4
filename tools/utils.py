@@ -235,6 +235,8 @@ def DOFFMPEG(
         #cmd += " -af asetrate={}*{}/{} ".format(rate, int(nval*100)
         #cmd += outfile
     else:
+        #input(basenote_ix)
+        #input(pitch_ix)
         tempo_factor    = midi_to_frequency(basenote_ix) / midi_to_frequency(pitch_ix)
 
         if tempo_factor < 0.5:

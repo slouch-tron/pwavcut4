@@ -74,6 +74,8 @@ class wcSlot():
         self.retrigger  = 1
         self.lastproc   = None
         self.procs      = list()    ## only for 'playOriginal'
+        self.asounds    = list()    ## to hold previous when we cut during play.  
+                                    ##  need to figure out channels again
 
         #assert(self.logger)
 
@@ -421,10 +423,15 @@ class wcSlot():
                     return True
 
             _asound.play()
+            #print(pygame.mixer.Channel(2).get_busy())
+            #input(dir(_asound))
             return True
 
 
     def doPlay_orig(self):
+        if not self.cmd_doplay_orig:
+            return
+
         assert(self.cmd_doplay_orig)    ## return?  do nothing?
         self.procs.append(subprocess.Popen(
             shlex.split(self.cmd_doplay_orig),
