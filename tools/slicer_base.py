@@ -58,7 +58,11 @@ class Slicer(portHolder):
     def __init__(self, **kwa):
         self.id         = Slicer.ID
         Slicer.ID += 1
-        self.devname    = f"{self.__class__.__name__}{self.id:02d}"
+
+        self.devnum     = kwa.get('devnum', 0)
+        self.devname    = f"{self.__class__.__name__}{self.devnum:02d}"
+        self.owner      = self.devname
+
         #self.owner      = kwa.get('owner', 'SLICER')
         self.owner      = kwa.get('owner', self.devname)
 

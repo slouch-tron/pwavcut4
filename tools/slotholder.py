@@ -40,7 +40,8 @@ class slotHolder(portHolder):
     ID = 1
 
     def __init__(self, stdscr, **kwa):
-        self.id             = slotHolder.ID;    slotHolder.ID +=1
+        self.id             = slotHolder.ID;    
+        slotHolder.ID       += 1
         self.devname        = f"{self.__class__.__name__}{self.id:02d}"
         self.logger         = GET_LOGGER(appname=self.devname)
 
@@ -198,6 +199,7 @@ class slotHolder(portHolder):
     def inc_focus_ix(self):             self.set_focus_ix(self.focus_ix+1)
     def dec_focus_ix(self):             self.set_focus_ix(self.focus_ix-1)
 
+    def SlotsReload(self):              [s.doReload() for s in self.slots]
 
     ## windows
     #############################################################
@@ -519,6 +521,7 @@ class slotHolder(portHolder):
                 261 : self.inc_selected_ix,
                 'u' : self.dec_focus_ix,
                 'U' : self.inc_focus_ix,
+                'R' : self.SlotsReload,
                 }
 
         self._keyDict.update({
@@ -547,16 +550,17 @@ class slotHolder(portHolder):
         _func = self.arrowKeyDict.get(ikey, None)
         if _func:
             self.last_func = _func.__name__
-            self.Log(f"'{ikey}' - '{self.last_func}'", level='visual')
+            self.Log(f"'{ikey}' - '{self.last_func}'", level='debug')
             _func()
             return True
 
         _func = self.keyDict.get(chr(ikey), None)
         if _func:
             self.last_func = _func.__name__
-            self.Log(f"'{chr(ikey)}' - '{self.last_func}'", level='visual')
+            self.Log(f"'{chr(ikey)}' - '{self.last_func}'", level='debug')
             _func()
             return True
+
 
     ############################################################################
     ############################################################################
@@ -586,7 +590,7 @@ class slotHolder(portHolder):
         if self.port_c:
             msg_c = self.port_c.poll()
             if msg_c:
-                self.last_msg_c = msg
+                self.last_msg_c = msg_c
                 self.msgCheck_CC(msg_c)
 
 
@@ -614,6 +618,7 @@ class slotHolder(portHolder):
                 _func(mod=_mod, stop=_stop)
 
                 self.Log(" | ".join([str(x) for x in [
+                    "PAD",
                     self.slots[_ix].slotname,
                     msg.note,
                     msg.channel,

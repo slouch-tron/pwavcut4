@@ -352,7 +352,16 @@ class wcSlot():
     ###################################################################
     def run_proc(self, cmd):
         ## ought to just put our own popen and logging here
-        return EXECUTE_CMD(cmd)
+        #return EXECUTE_CMD(cmd)
+        def _log(txt):  
+            self.Log(txt, level='debug')
+
+        #_log(f"CMD: {cmd}")
+        _start = time.time()
+        p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        o, e = p.communicate()
+        #_log("RC={}, {} sec elapsed".format(p.returncode, time.time() - _start))
+        return p
 
     @property
     def cmd_docut_out(self):
@@ -366,7 +375,6 @@ class wcSlot():
 
     @property
     def cmd_docut_mod(self):
-        print(self.outfile)
         #assert(os.path.isfile(self.outfile))
         if os.path.isfile(self.outfile):
             return "ffmpeg -y -i {} -af atempo={:.2f} {}".format(
@@ -388,15 +396,17 @@ class wcSlot():
     def doCut3_out(self, mod=False):
         cmd = self.cmd_docut_mod if mod else self.cmd_docut_out
         self.Log(f"doCut | mod={mod}")
-        self.Log(f"{cmd}")
         if cmd:
             _result = self.run_proc(cmd)
-            self.Log(f"{self.slotname}.doCut mod={mod} | {cmd}")
+            self.Log(f"{self.slotname}.doCut mod={mod} | {cmd}", level='debug')
+            self.Log(f"{self.slotname}.doCut mod={mod}", level='visual')
 
             if mod: self._modsound = None   ## better to have no setter?
             else:   self._outsound = None
 
             return True
+        else:
+            self.Log(f"doCut3_out: cmd={cmd}", level='visual')
 
 
     def doCut3_mod(self):
@@ -463,6 +473,13 @@ class wcSlot():
 
         self.Log(_lout)
 
+
+    def doReload(self):
+        ''' so we can change OUT.wav from a bash script or something,
+            then trigger this with a keyboard key
+        '''
+        self._outsound = None
+        self._modsound = None
 
     ############################################################################
     ############################################################################
@@ -537,6 +554,7 @@ class wcSlot():
                 shift_tempo=self.shift_tempo,
                 ctrl_ch=self.slotnum,
                 Log=self._Log,
+                devnum=self.slotnum,
                 )
 
             self.Log(f"instantiated: {self._PitchObj}")
