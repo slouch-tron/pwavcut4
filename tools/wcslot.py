@@ -9,6 +9,7 @@ import shlex, subprocess
 import time
 import yaml
 
+from pydub import AudioSegment
 
 from .defaults import (
         DEFAULT_WAV_IN_DIR, DEFAULT_WAV_OUT_DIR, 
@@ -325,6 +326,7 @@ class wcSlot():
 
         if not self._outsound:
             self._outsound = self._pyg_loader(self.outfile)
+            self._outsound and self.asounds.append(self._outsound)
 
         return self._outsound
 
@@ -335,16 +337,39 @@ class wcSlot():
 
         if not self._modsound:
             self._modsound = self._pyg_loader(self.modfile)
+            self._modsound and self.asounds.append(self._modsound)
 
         return self._modsound
 
 
     def _pyg_loader(self, _file):
-        _obj = PYG_SOUND_LOAD(_file)
-        if _obj:
-            self.duration = _obj.get_length()
+        if os.path.isfile(_file):
+            self.Log(f"_pyg_loader: pygame.error loading {_file}", level='debug')
+            try:
+                _sound = pygame.mixer.Sound(_file)
+            except pygame.error as ee:
+                self.Log(f"_pyg_loader: pygame.error loading {_file}", level='error')
+                raise ee
 
-        return _obj
+            self.duration = _sound.get_length()
+            self.Log(f"_pyg_loader: OK loading {_file}", level='debug')
+            return _sound 
+
+        #_obj = PYG_SOUND_LOAD(_file)
+        #if _obj:
+        #    self.duration = _obj.get_length()
+
+        #return _obj
+
+
+    def doNormalize(self, _file):
+        if os.path.isfile(_file):
+            self.Log("doNormalize '{_file}'", level='debug')
+            seg = AudioSegment.from_wav(_file)
+            norm = seg.normalize()
+            norm.export(_file, format='wav')
+        else:
+            self.Log("doNormalize '{_file}'", level='error')
 
 
     ## cut, play, stop
@@ -401,6 +426,8 @@ class wcSlot():
             self.Log(f"{self.slotname}.doCut mod={mod} | {cmd}", level='debug')
             self.Log(f"{self.slotname}.doCut mod={mod}", level='visual')
 
+            self.doNormalize(self.modfile if mod else self.outfile)
+
             if mod: self._modsound = None   ## better to have no setter?
             else:   self._outsound = None
 
@@ -411,7 +438,7 @@ class wcSlot():
 
     def doCut3_mod(self):
         if self.bpm == self.shift_tempo:
-            self.Log("WARN: bpm equals shift tempo, converting 1:1")
+            self.Log("note: bpm equals shift tempo, converting 1:1")
 
         return self.doCut3_out(mod=True)
 
@@ -457,21 +484,22 @@ class wcSlot():
         self.is_playing_mod = False
         self.is_playing_orig = False
 
-        if len(self.procs) > 0:
-            [self.Log(f"terminate {p.pid}") for p in self.procs if p]
-            [p.terminate() for p in self.procs if p]
+        for p in self.procs:
+            if not p: continue
+            self.Log(f"terminate {p.pid}", level='debug')
+            p.terminate()
 
-        #self.procs = list()
-        _lout = "doStop"
-        if self.outsound:
-            self.outsound.stop()
-            _lout += " OUT"
+        for a in self.asounds:
+            if not a: continue
+            self.Log(f"stop {a}", level='debug')
+            a.stop()
 
-        if self.modsound:
-            self.modsound.stop()
-            _lout += " MOD"
+        self.outsound and self.outsound.stop()
+        self.modsound and self.modsound.stop()
 
-        self.Log(_lout)
+        #self.procs      = list()
+        #self.asounds    = list()       ## dont clear this i guess?!!
+        #self.Log("cleared procs and asounds Lists", level='debug')
 
 
     def doReload(self):
@@ -545,6 +573,7 @@ class wcSlot():
             self._PitchObj = None
 
 
+            ## noticed we arent actually using 'ptype'..
             _Class = PitchesSlicer
             self.Log(f"instantiating: {_Class}")
 
