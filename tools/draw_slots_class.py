@@ -5,6 +5,115 @@ import curses
 class DrawSlotsClass():
 
     def DrawSlots(self, **kwa):
+        ''' would columns logic be simpler? '''
+
+        _attr0 = curses.color_pair(250)     ## basic
+        _hattr = curses.color_pair(30)      ## header
+        _sattr = curses.A_REVERSE           ## selected slot
+        _fattr = curses.color_pair(40) | curses.A_REVERSE   ## selected field
+        _oattr = curses.color_pair(50)      ## outfile, modfile etc
+
+        _head = "[SS]"
+        self.mainWin.addstr(0, 0, _head, _hattr)
+        _yy = 1
+        _xx = 0
+        for ix, f in enumerate(self.slots):
+            _attr = _attr0
+            if ix == self.selected_ix:
+                _attr = _sattr
+
+            self.mainWin.addstr(_yy+ix, _xx, f"{f.slotnum:02d}".center(len(_head)), _attr)
+
+        _xx += len(_head)
+        _yy = 1
+        _head = "[POS0    ]"
+        self.mainWin.addstr(0, _xx, _head, _hattr)
+        for ix, f in enumerate(self.slots):
+            _attr = _attr0
+            if ix == self.selected_ix:
+                _attr = _sattr
+
+                if self.field_ix == 0:
+                    _attr = _fattr
+
+
+            self.mainWin.addstr(_yy+ix, _xx, f"{f.pos0:8.2f}".center(len(_head)), _attr)
+
+        _xx += len(_head)
+        _yy = 1
+        _head = "[POS1    ]"
+        self.mainWin.addstr(0, _xx, _head, _hattr)
+        for ix, f in enumerate(self.slots):
+            _attr = _attr0
+            if ix == self.selected_ix:
+                _attr = _sattr
+
+                if self.field_ix == 1:
+                    _attr = _fattr
+
+            self.mainWin.addstr(_yy+ix, _xx, f"{f.pos1:8.2f}".center(len(_head)), _attr)
+
+        _xx += len(_head)
+        _yy = 1
+        _head = "[INFILE                          ]"
+        self.mainWin.addstr(0, _xx, _head, _hattr)
+        for ix, f in enumerate(self.slots):
+            _attr = _attr0
+            if ix == self.selected_ix:
+                _attr = _sattr
+                if self.field_ix == 2:
+                    _attr = _fattr
+            
+            _infile = "None" if not f.infile else os.path.splitext(os.path.split(f.infile)[-1])[0]
+            self.mainWin.addstr(_yy+ix, _xx, f"{_infile:^34s}".center(len(_head)), _attr)
+
+        _xx += len(_head)
+        _yy = 1
+        _head = "[LLEN    ]"
+        self.mainWin.addstr(0, _xx, _head, _hattr)
+        for ix, f in enumerate(self.slots):
+            _attr = _attr0
+            self.mainWin.addstr(_yy+ix, _xx, f"{f.lock_length:9.4f}".center(len(_head)), _attr)
+
+        _xx += len(_head)
+        _yy = 1
+        _head = "[LOCK]"
+        self.mainWin.addstr(0, _xx, _head, _hattr)
+        for ix, f in enumerate(self.slots):
+            _attr = _attr0
+            if f.lock_length_switch:
+                _attr |= curses.A_REVERSE
+
+            self.mainWin.addstr(_yy+ix, _xx, "LOCK".center(len(_head)), _attr)
+
+        _xx += len(_head)
+        _yy = 1
+        _head = "[OUT]"
+        self.mainWin.addstr(0, _xx, _head, _hattr)
+        for ix, f in enumerate(self.slots):
+            _attr = _attr0
+            _ostr = "   "
+            if f.outsound:
+                _ostr = "OUT"
+                _attr = _oattr
+
+            self.mainWin.addstr(_yy+ix, _xx, _ostr.center(len(_head)), _attr)
+
+        _xx += len(_head)
+        _yy = 1
+        _head = "[MOD]"
+        self.mainWin.addstr(0, _xx, _head, _hattr)
+        for ix, f in enumerate(self.slots):
+            _attr = _attr0
+            _ostr = "   "
+            if f.modsound:
+                _ostr = "MOD"
+                _attr = _oattr
+
+            self.mainWin.addstr(_yy+ix, _xx, _ostr.center(len(_head)), _attr)
+
+
+    def DrawSlots2(self, **kwa):
         _col0 = kwa.get('col0', None) or curses.color_pair(24)      ## unselected, regular
         _col1 = kwa.get('col1', None) or curses.color_pair(51)      ## highlighted field
         _col2 = kwa.get('col2', None) or curses.color_pair(118)     ## toggled
