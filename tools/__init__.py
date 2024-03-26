@@ -12,6 +12,8 @@ from .utils import INFILE_CONVERT, NORMALIZE
 from .defaults import CURSE_INIT
 from .cfg_setup import CFG_FILENAME
 
+from .drumpack_holder import drumPackHolder
+
 
 ## found this in log_setup also
 '''

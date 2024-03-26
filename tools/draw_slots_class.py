@@ -10,20 +10,19 @@ class DrawSlotsClass():
         _col2 = kwa.get('col2', None) or curses.color_pair(118)     ## toggled
 
         #_ym, _xm = self.mainWin.getmaxyx()
-        _header2 = "_|_".join([
+        _header2 = "[" + "][".join([
             'SS', 
-            'POS0    ',
-            'POS1    ',
-            'INFILE              ',
-            'CH',
-            'LEN      ',
-            'LLOCK',
+            'POS0     ',
+            'POS1     ',
+            'INFILE               ',
+            'CH ',
+            'LEN       ',
+            'LLOCK ',
             'OUT',
             'MOD',
             "OBJ",
             "",
-
-            ])
+            ]) + "]"
 
         self.mainWin.addstr(0, 0, _header2)
 
@@ -49,10 +48,11 @@ class DrawSlotsClass():
                 _attr |= curses.A_REVERSE
 
             _ostr = "   |          |          |                      |    |           |       |"
+            _ostr += "    |    |    |"
             #self.mainWin.addstr(_yy+ix, 0, _ostr, _attr)
 
             _xx = 0
-            _ostr = f"{ix:02d}"
+            _ostr = f" {ix:02d}"
             self.mainWin.addstr(_yy+ix, 0, _ostr, _attr);   _xx += len(_ostr) + 3
             #self.mainWin.addstr(_yy+ix, _xx, " | ", _attr); _xx += len(" | ")
 
@@ -79,7 +79,7 @@ class DrawSlotsClass():
                     _attr3 = _col1
                 _attr3 |= curses.A_REVERSE
 
-            self.mainWin.addstr(_yy+ix, _xx, _lock, _attr3);  _xx += len(_lock) + 3
+            self.mainWin.addstr(_yy+ix, _xx, _lock, _attr3);  _xx += len(_lock) + 2
             #self.mainWin.addstr(_yy+ix, _xx, ' | ', _attr); _xx += len(" | ")
 
             #continue
@@ -106,7 +106,7 @@ class DrawSlotsClass():
                         #_attr2 = curses.color_pair(124)
                         _attr2 = curses.A_REVERSE
                     
-                self.mainWin.addstr(_yy+ix, _xx, _ostr, _attr2);    _xx += len(_ostr) + 3
+                self.mainWin.addstr(_yy+ix, _xx, _ostr, _attr2);    _xx += len(_ostr) + 2
                 #self.mainWin.addstr(_yy+ix, _xx, " | ", _attr);     _xx += len(' | ')
 
 

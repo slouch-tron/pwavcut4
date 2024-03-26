@@ -90,7 +90,7 @@ class slotHolder(portHolder):
             f"RES {self.resolution:4.2f}",
             f"{self.last_func:^20s}",
             f"cyc={self.cyc_ct:>9d}",
-            f"mwcoord=({y0},{x0},{yy},{xx})",
+            #f"mwcoord=({y0},{x0},{yy},{xx})",
             ])
 
 
@@ -386,6 +386,9 @@ class slotHolder(portHolder):
         self.stdscr.addstr(1, 0, f"Draw per sec: {self.hz:9.2f}")
         _chs = [self.MIDI_CH_CTL, self.MIDI_CH_MOD, self.MIDI_CH_KIT]
         self.stdscr.addstr(1, 40, str(_chs))
+
+        _bpm = self.selectedSlot.bpm
+        self.stdscr.addstr(1, 60, "16b@{:6.2f} bpm -> {:5.4f} sec".format(_bpm, 960 / _bpm))
 
         self.DrawPortsWin()
 
